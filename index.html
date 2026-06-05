@@ -198,65 +198,40 @@
       </div>
     </section>
 
-    <!-- INTERACTIVE RESOURCES / MORE TRIGGERS -->
-    <section class="section" id="resources" data-view="ViewContent" data-name="resources">
-      <h2 class="section-title reveal">Explore &amp; engage</h2>
-      <p class="section-sub reveal">More ways to interact — each one fires a TikTok Pixel event.</p>
+    <!-- SPLIT TEST KNOWLEDGE CHECK -->
+    <section class="section" id="quiz" data-view="ViewContent" data-name="quiz">
+      <h2 class="section-title reveal">Split test knowledge check</h2>
+      <p class="section-sub reveal">Three quick questions on TikTok split testing. Pick an answer — each one fires a TikTok Pixel event.</p>
 
-      <div class="res-grid reveal">
-        <!-- Search box -->
-        <div class="res-card">
-          <h3>🔎 Search the playbook</h3>
-          <form id="searchForm" class="res-search">
-            <input id="searchInput" type="text" placeholder="e.g. confidence, key metric…" aria-label="Search" />
-            <button class="btn btn-primary" type="submit">Search</button>
-          </form>
-          <small class="res-hint">Fires <b>Search</b> with your query.</small>
-        </div>
-
-        <!-- Rating -->
-        <div class="res-card">
-          <h3>⭐ Rate this guide</h3>
-          <div class="stars" id="stars">
-            <button data-star="1" aria-label="1 star">★</button>
-            <button data-star="2" aria-label="2 stars">★</button>
-            <button data-star="3" aria-label="3 stars">★</button>
-            <button data-star="4" aria-label="4 stars">★</button>
-            <button data-star="5" aria-label="5 stars">★</button>
+      <div class="quiz reveal" id="quizBox">
+        <article class="q" data-q="confidence" data-correct="b">
+          <h3>1 · What confidence level does TikTok use to declare a winner?</h3>
+          <div class="opts">
+            <button data-opt="a">75%</button>
+            <button data-opt="b">90%</button>
+            <button data-opt="c">99%</button>
           </div>
-          <small class="res-hint">Fires <b>SubmitForm</b> with your rating.</small>
-        </div>
+        </article>
 
-        <!-- Newsletter -->
-        <div class="res-card">
-          <h3>✉️ Get split-test tips</h3>
-          <form id="subForm" class="res-search">
-            <input id="subEmail" type="email" placeholder="you@example.com" aria-label="Email" />
-            <button class="btn btn-primary" type="submit">Subscribe</button>
-          </form>
-          <small class="res-hint">Fires <b>Subscribe</b> + <b>CompleteRegistration</b>.</small>
-        </div>
+        <article class="q" data-q="duration" data-correct="c">
+          <h3>2 · What's the recommended minimum test duration?</h3>
+          <div class="opts">
+            <button data-opt="a">1 day</button>
+            <button data-opt="b">3 days</button>
+            <button data-opt="c">At least 7 days</button>
+          </div>
+        </article>
 
-        <!-- Download -->
-        <div class="res-card">
-          <h3>📥 Free checklist</h3>
-          <button class="btn btn-ghost" data-track="Download" data-name="split_test_checklist">Download the 7-day checklist</button>
-          <small class="res-hint">Fires <b>Download</b>.</small>
-        </div>
+        <article class="q" data-q="audience" data-correct="a">
+          <h3>3 · How is your audience handled during a split test?</h3>
+          <div class="opts">
+            <button data-opt="a">Split evenly — each group sees only one version</button>
+            <button data-opt="b">Everyone sees both versions</button>
+            <button data-opt="c">Only new users are tested</button>
+          </div>
+        </article>
 
-        <!-- Consult -->
-        <div class="res-card">
-          <h3>💬 Talk to the team</h3>
-          <button class="btn btn-ghost" data-track="Consult" data-name="book_consult">Book a 15-min consult</button>
-          <small class="res-hint">Fires <b>Consult</b>.</small>
-        </div>
-
-        <!-- Add to wishlist -->
-        <div class="res-card">
-          <h3>🔖 Save for later</h3>
-          <button class="btn btn-ghost" data-track="AddToWishlist" data-name="bookmark_page">Bookmark this guide</button>
-          <small class="res-hint">Fires <b>AddToWishlist</b>.</small>
-        </div>
+        <p class="quiz-score" id="quizScore" hidden></p>
       </div>
     </section>
 
@@ -524,8 +499,7 @@
       }
     }, { passive: true });
 
-    // ---- Resources section interactions ----
-    // Clickable chips -> Search
+    // Clickable variable chips ("What you can test") -> Search
     document.querySelectorAll("[data-chip]").forEach(function (c) {
       c.addEventListener("click", function () {
         c.classList.add("picked");
@@ -533,43 +507,37 @@
       });
     });
 
-    // Search form -> Search
-    var searchForm = document.getElementById("searchForm");
-    if (searchForm) {
-      searchForm.addEventListener("submit", function (e) {
-        e.preventDefault();
-        var q = (document.getElementById("searchInput").value || "").trim() || "(empty)";
-        ttqTrack2("Search", "site_search", { search_string: q });
-        var btn = searchForm.querySelector("button");
-        btn.textContent = "Searched ✓"; setTimeout(function () { btn.textContent = "Search"; }, 1500);
-      });
-    }
-
-    // Star rating -> SubmitForm
-    var stars = document.getElementById("stars");
-    if (stars) {
-      stars.querySelectorAll("button").forEach(function (s) {
-        s.addEventListener("click", function () {
-          var v = s.dataset.star;
-          stars.querySelectorAll("button").forEach(function (b) {
-            b.classList.toggle("on", b.dataset.star <= v);
+    // ---- Split test knowledge quiz ----
+    var quizBox = document.getElementById("quizBox");
+    if (quizBox) {
+      var answered = {};
+      var totalQ = quizBox.querySelectorAll(".q").length;
+      quizBox.querySelectorAll(".q").forEach(function (q) {
+        var key = q.dataset.q, correct = q.dataset.correct;
+        q.querySelectorAll(".opts button").forEach(function (b) {
+          b.addEventListener("click", function () {
+            if (q.dataset.done) return;          // lock once answered
+            q.dataset.done = "1";
+            var ok = b.dataset.opt === correct;
+            q.querySelectorAll(".opts button").forEach(function (x) {
+              x.disabled = true;
+              if (x.dataset.opt === correct) x.classList.add("correct");
+            });
+            if (!ok) b.classList.add("wrong");
+            answered[key] = ok;
+            // each answer -> Search event (topic-relevant)
+            ttqTrack2("Search", "quiz_" + key, { search_string: (ok ? "correct_" : "wrong_") + key });
+            // finished all questions -> CompleteRegistration
+            if (Object.keys(answered).length === totalQ) {
+              var score = Object.values(answered).filter(Boolean).length;
+              var el = document.getElementById("quizScore");
+              el.hidden = false;
+              el.textContent = "You scored " + score + " / " + totalQ + " — " +
+                (score === totalQ ? "split-test pro! 🏆" : "brush up in the steps above ☝️");
+              ttqTrack2("CompleteRegistration", "quiz_complete", { search_string: score + "_of_" + totalQ });
+            }
           });
-          ttqTrack2("SubmitForm", "rating", { search_string: v + "_stars" });
         });
-      });
-    }
-
-    // Newsletter -> Subscribe + CompleteRegistration
-    var subForm = document.getElementById("subForm");
-    if (subForm) {
-      subForm.addEventListener("submit", function (e) {
-        e.preventDefault();
-        var email = (document.getElementById("subEmail").value || "").trim();
-        if (!email) { alert("Enter an email 🙂"); return; }
-        ttqTrack("Subscribe", "newsletter");
-        ttqTrack("CompleteRegistration", "newsletter_signup");
-        var btn = subForm.querySelector("button");
-        btn.textContent = "Subscribed ✓"; btn.disabled = true;
       });
     }
 
