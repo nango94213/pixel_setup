@@ -297,6 +297,42 @@ main, header, footer { position: relative; z-index: 2; }
 }
 .lab-result p { margin-bottom: 1rem; }
 
+/* ---------- Resources grid ---------- */
+.res-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.25rem; }
+.res-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 1.75rem; display: flex; flex-direction: column; gap: 0.9rem;
+  transition: border-color 0.18s ease, transform 0.18s ease;
+}
+.res-card:hover { border-color: var(--tt-cyan); transform: translateY(-4px); }
+.res-card h3 { font-size: 1.1rem; }
+.res-card .btn { border: 1px solid var(--line); cursor: pointer; font-family: inherit; align-self: flex-start; }
+.res-card .btn:disabled { opacity: 0.6; cursor: default; }
+.res-hint { color: var(--muted); font-size: 0.8rem; }
+.res-hint b { color: var(--tt-cyan); }
+
+.res-search { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.res-search input {
+  flex: 1 1 140px; min-width: 0; padding: 0.7rem 0.9rem;
+  background: var(--surface-2); color: var(--text);
+  border: 1px solid var(--line); border-radius: 10px; font-size: 0.95rem;
+}
+.res-search input:focus { outline: none; border-color: var(--tt-cyan); }
+.res-search .btn { border: none; }
+
+.stars { display: flex; gap: 0.25rem; }
+.stars button {
+  background: none; border: none; cursor: pointer;
+  font-size: 1.8rem; line-height: 1; color: var(--surface-2);
+  transition: color 0.12s ease, transform 0.12s ease;
+}
+.stars button:hover { transform: scale(1.15); }
+.stars button.on { color: #ffd24a; }
+
+.chip { cursor: pointer; }
+.chip.picked { border-color: var(--tt-pink); color: var(--tt-cyan); }
+
 /* ---------- Footer ---------- */
 .footer { border-top: 1px solid var(--line); text-align: center; padding: 2.75rem 1.5rem; color: var(--muted); font-size: 0.88rem; }
 .footer a { color: var(--tt-cyan); text-decoration: none; }

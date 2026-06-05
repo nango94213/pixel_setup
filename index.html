@@ -91,15 +91,15 @@
       <p class="section-sub reveal">TikTok supports split testing across nine categories of variables.</p>
 
       <div class="chips reveal">
-        <span class="chip">Targeting</span>
-        <span class="chip">Placement</span>
-        <span class="chip">Bidding &amp; Optimization</span>
-        <span class="chip">Budget Strategy</span>
-        <span class="chip">Creative Assets</span>
-        <span class="chip">Catalog</span>
-        <span class="chip">Creative</span>
-        <span class="chip">Custom (multi-variable)</span>
-        <span class="chip">Smart+</span>
+        <span class="chip" data-chip="Targeting">Targeting</span>
+        <span class="chip" data-chip="Placement">Placement</span>
+        <span class="chip" data-chip="Bidding &amp; Optimization">Bidding &amp; Optimization</span>
+        <span class="chip" data-chip="Budget Strategy">Budget Strategy</span>
+        <span class="chip" data-chip="Creative Assets">Creative Assets</span>
+        <span class="chip" data-chip="Catalog">Catalog</span>
+        <span class="chip" data-chip="Creative">Creative</span>
+        <span class="chip" data-chip="Custom (multi-variable)">Custom (multi-variable)</span>
+        <span class="chip" data-chip="Smart+">Smart+</span>
       </div>
     </section>
 
@@ -194,6 +194,68 @@
           <span class="winner-badge">🏆 Winner</span>
           <p id="winnerText"></p>
           <button class="btn btn-ghost" id="declareBtn">Declare winner &amp; scale</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- INTERACTIVE RESOURCES / MORE TRIGGERS -->
+    <section class="section" id="resources" data-view="ViewContent" data-name="resources">
+      <h2 class="section-title reveal">Explore &amp; engage</h2>
+      <p class="section-sub reveal">More ways to interact — each one fires a TikTok Pixel event.</p>
+
+      <div class="res-grid reveal">
+        <!-- Search box -->
+        <div class="res-card">
+          <h3>🔎 Search the playbook</h3>
+          <form id="searchForm" class="res-search">
+            <input id="searchInput" type="text" placeholder="e.g. confidence, key metric…" aria-label="Search" />
+            <button class="btn btn-primary" type="submit">Search</button>
+          </form>
+          <small class="res-hint">Fires <b>Search</b> with your query.</small>
+        </div>
+
+        <!-- Rating -->
+        <div class="res-card">
+          <h3>⭐ Rate this guide</h3>
+          <div class="stars" id="stars">
+            <button data-star="1" aria-label="1 star">★</button>
+            <button data-star="2" aria-label="2 stars">★</button>
+            <button data-star="3" aria-label="3 stars">★</button>
+            <button data-star="4" aria-label="4 stars">★</button>
+            <button data-star="5" aria-label="5 stars">★</button>
+          </div>
+          <small class="res-hint">Fires <b>SubmitForm</b> with your rating.</small>
+        </div>
+
+        <!-- Newsletter -->
+        <div class="res-card">
+          <h3>✉️ Get split-test tips</h3>
+          <form id="subForm" class="res-search">
+            <input id="subEmail" type="email" placeholder="you@example.com" aria-label="Email" />
+            <button class="btn btn-primary" type="submit">Subscribe</button>
+          </form>
+          <small class="res-hint">Fires <b>Subscribe</b> + <b>CompleteRegistration</b>.</small>
+        </div>
+
+        <!-- Download -->
+        <div class="res-card">
+          <h3>📥 Free checklist</h3>
+          <button class="btn btn-ghost" data-track="Download" data-name="split_test_checklist">Download the 7-day checklist</button>
+          <small class="res-hint">Fires <b>Download</b>.</small>
+        </div>
+
+        <!-- Consult -->
+        <div class="res-card">
+          <h3>💬 Talk to the team</h3>
+          <button class="btn btn-ghost" data-track="Consult" data-name="book_consult">Book a 15-min consult</button>
+          <small class="res-hint">Fires <b>Consult</b>.</small>
+        </div>
+
+        <!-- Add to wishlist -->
+        <div class="res-card">
+          <h3>🔖 Save for later</h3>
+          <button class="btn btn-ghost" data-track="AddToWishlist" data-name="bookmark_page">Bookmark this guide</button>
+          <small class="res-hint">Fires <b>AddToWishlist</b>.</small>
         </div>
       </div>
     </section>
@@ -455,6 +517,55 @@
         ttqTrack("SubmitForm", "reached_bottom");
       }
     }, { passive: true });
+
+    // ---- Resources section interactions ----
+    // Clickable chips -> Search
+    document.querySelectorAll("[data-chip]").forEach(function (c) {
+      c.addEventListener("click", function () {
+        c.classList.add("picked");
+        ttqTrack2("Search", "variable_chip", { search_string: c.dataset.chip });
+      });
+    });
+
+    // Search form -> Search
+    var searchForm = document.getElementById("searchForm");
+    if (searchForm) {
+      searchForm.addEventListener("submit", function (e) {
+        e.preventDefault();
+        var q = (document.getElementById("searchInput").value || "").trim() || "(empty)";
+        ttqTrack2("Search", "site_search", { search_string: q });
+        var btn = searchForm.querySelector("button");
+        btn.textContent = "Searched ✓"; setTimeout(function () { btn.textContent = "Search"; }, 1500);
+      });
+    }
+
+    // Star rating -> SubmitForm
+    var stars = document.getElementById("stars");
+    if (stars) {
+      stars.querySelectorAll("button").forEach(function (s) {
+        s.addEventListener("click", function () {
+          var v = s.dataset.star;
+          stars.querySelectorAll("button").forEach(function (b) {
+            b.classList.toggle("on", b.dataset.star <= v);
+          });
+          ttqTrack2("SubmitForm", "rating", { search_string: v + "_stars" });
+        });
+      });
+    }
+
+    // Newsletter -> Subscribe + CompleteRegistration
+    var subForm = document.getElementById("subForm");
+    if (subForm) {
+      subForm.addEventListener("submit", function (e) {
+        e.preventDefault();
+        var email = (document.getElementById("subEmail").value || "").trim();
+        if (!email) { alert("Enter an email 🙂"); return; }
+        ttqTrack("Subscribe", "newsletter");
+        ttqTrack("CompleteRegistration", "newsletter_signup");
+        var btn = subForm.querySelector("button");
+        btn.textContent = "Subscribed ✓"; btn.disabled = true;
+      });
+    }
   </script>
 </body>
 </html>
