@@ -32,7 +32,7 @@
   <header class="hero">
     <nav class="nav">
       <span class="brand">SPLIT&nbsp;<b>TEST</b></span>
-      <a class="nav-cta" href="https://ads.tiktok.com/help/article/split-testing?lang=en" target="_blank" rel="noopener">Official Docs ↗</a>
+      <a class="nav-cta" href="https://ads.tiktok.com/help/article/split-testing?lang=en" target="_blank" rel="noopener" data-track="Consult" data-name="official_docs_nav">Official Docs ↗</a>
     </nav>
 
     <div class="hero-inner">
@@ -43,8 +43,8 @@
         and let a <strong>90% confidence</strong> model tell you which one actually wins.
       </p>
       <div class="hero-actions">
-        <a class="btn btn-primary" href="#how">How it works</a>
-        <a class="btn btn-ghost" href="https://ads.tiktok.com/help/article/create-split-test?lang=en" target="_blank" rel="noopener">Create a split test ↗</a>
+        <a class="btn btn-primary" href="#how" data-track="ClickButton" data-name="how_it_works">How it works</a>
+        <a class="btn btn-ghost" href="https://ads.tiktok.com/help/article/create-split-test?lang=en" target="_blank" rel="noopener" data-track="ClickButton" data-name="create_split_test">Create a split test ↗</a>
       </div>
 
       <div class="stats">
@@ -104,7 +104,7 @@
     </section>
 
     <!-- HOW -->
-    <section class="section" id="how">
+    <section class="section" id="how" data-view="ViewContent" data-name="how_to_create">
       <h2 class="section-title reveal">How to create one</h2>
       <p class="section-sub reveal">From the TikTok Ads Manager, it's a guided flow across three tabs.</p>
 
@@ -147,7 +147,7 @@
         We design experiments, run them at a 90% confidence bar, and turn results into
         decisions you can scale. Pick a variable, set a key metric, give it 7 days — let the data decide.
       </p>
-      <a class="btn btn-primary" href="https://ads.tiktok.com/business/en-US" target="_blank" rel="noopener">Explore TikTok For Business ↗</a>
+      <a class="btn btn-primary" href="https://ads.tiktok.com/business/en-US" target="_blank" rel="noopener" data-track="Subscribe" data-name="explore_tfb">Explore TikTok For Business ↗</a>
     </section>
   </main>
 
@@ -275,6 +275,32 @@
       addEventListener("resize", resize);
       resize(); tick();
     })();
+
+    // ---- TikTok Pixel: event tracking ----
+    function ttqTrack(event, name) {
+      if (window.ttq && typeof ttq.track === "function") {
+        ttq.track(event, { content_name: name });
+      }
+    }
+    // Click events on tagged elements (ClickButton / Subscribe / Consult)
+    document.querySelectorAll("[data-track]").forEach(function (el) {
+      el.addEventListener("click", function () {
+        ttqTrack(el.dataset.track, el.dataset.name);
+      });
+    });
+    // ViewContent: fire once when the "how to create" section scrolls into view
+    var vc = document.querySelectorAll("[data-view]");
+    if (vc.length) {
+      var vio = new IntersectionObserver(function (entries) {
+        entries.forEach(function (en) {
+          if (en.isIntersecting) {
+            ttqTrack(en.target.dataset.view, en.target.dataset.name);
+            vio.unobserve(en.target);
+          }
+        });
+      }, { threshold: 0.4 });
+      vc.forEach(function (el) { vio.observe(el); });
+    }
   </script>
 </body>
 </html>
