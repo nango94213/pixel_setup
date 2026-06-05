@@ -378,9 +378,15 @@
     })();
 
     // ---- TikTok Pixel: event tracking ----
+    // Demo value used for all events (no real transactions on this site)
+    var DEMO_VALUE = 9.99, DEMO_CURRENCY = "USD";
     function ttqTrack(event, name) {
       if (window.ttq && typeof ttq.track === "function") {
-        ttq.track(event, { content_name: name });
+        ttq.track(event, {
+          contents: [{ content_id: name, content_type: "product", content_name: name }],
+          value: DEMO_VALUE,
+          currency: DEMO_CURRENCY
+        });
       }
     }
     // Click events on tagged elements (ClickButton / Subscribe / Consult)
@@ -478,8 +484,8 @@
       if (!(window.ttq && typeof ttq.track === "function")) return;
       var payload = {
         contents: [{ content_id: name, content_type: "product", content_name: name }],
-        value: 0,
-        currency: "USD"
+        value: DEMO_VALUE,
+        currency: DEMO_CURRENCY
       };
       if (extra) for (var k in extra) payload[k] = extra[k];
       ttq.track(event, payload);
