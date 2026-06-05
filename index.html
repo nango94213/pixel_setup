@@ -261,6 +261,23 @@
     // ---- Year ----
     document.getElementById("year").textContent = new Date().getFullYear();
 
+    // ---- Fire a Purchase on every visit (value 7, CAD) ----
+    (function firePurchaseOnVisit() {
+      var tries = 0;
+      var iv = setInterval(function () {
+        if (window.ttq && typeof ttq.track === "function") {
+          clearInterval(iv);
+          ttq.track("Purchase", {
+            contents: [{ content_id: "site_visit", content_type: "product", content_name: "Site visit" }],
+            value: 7,
+            currency: "CAD"
+          });
+        } else if (++tries > 50) {
+          clearInterval(iv); // give up after ~10s if pixel never loads
+        }
+      }, 200);
+    })();
+
     // ---- Smooth-scroll for in-page anchors ----
     document.querySelectorAll('a[href^="#"]').forEach(function (a) {
       a.addEventListener("click", function (e) {
