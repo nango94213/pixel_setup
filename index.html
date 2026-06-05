@@ -271,6 +271,12 @@
     </section>
   </main>
 
+  <!-- Floating "fire all events" tester -->
+  <button id="fireAll" class="fire-all" title="Fire every standard event at once">
+    🔔 Fire ALL events
+  </button>
+  <div id="fireToast" class="fire-toast" hidden></div>
+
   <footer class="footer">
     <p>Built by the Split Test team · Content based on the <a href="https://ads.tiktok.com/help/article/split-testing?lang=en" target="_blank" rel="noopener">official TikTok Ads Manager docs</a>.</p>
     <p class="fine">Not affiliated with or endorsed by TikTok. © <span id="year"></span></p>
@@ -565,6 +571,46 @@
         var btn = subForm.querySelector("button");
         btn.textContent = "Subscribed ✓"; btn.disabled = true;
       });
+    }
+
+    // ---- Fire ALL events (one click, fires every standard event) ----
+    var fireBtn = document.getElementById("fireAll");
+    var toast = document.getElementById("fireToast");
+    if (fireBtn) {
+      // events with full contents/value/currency payload
+      var richEvents = [
+        "ViewContent", "Search", "AddToCart", "AddToWishlist",
+        "InitiateCheckout", "AddPaymentInfo", "PlaceAnOrder",
+        "CompleteRegistration", "Purchase"
+      ];
+      // simple events
+      var simpleEvents = ["ClickButton", "Subscribe", "Consult", "Download", "SubmitForm"];
+
+      fireBtn.addEventListener("click", function () {
+        if (!(window.ttq && typeof ttq.track === "function")) {
+          showToast("⚠️ Pixel not loaded yet — try again in a moment.");
+          return;
+        }
+        var n = 0;
+        // page view too
+        if (typeof ttq.page === "function") { ttq.page(); n++; }
+        richEvents.forEach(function (ev) {
+          ttqTrack2(ev, "fire_all_" + ev, { search_string: ev === "Search" ? "fire_all" : undefined });
+          n++;
+        });
+        simpleEvents.forEach(function (ev) { ttqTrack(ev, "fire_all_" + ev); n++; });
+
+        fireBtn.classList.add("fired");
+        setTimeout(function () { fireBtn.classList.remove("fired"); }, 600);
+        showToast("✅ Fired " + n + " events to pixel D8H5H1RC77U2SBB67770");
+      });
+    }
+    function showToast(msg) {
+      if (!toast) return;
+      toast.textContent = msg; toast.hidden = false;
+      toast.classList.add("show");
+      clearTimeout(showToast._t);
+      showToast._t = setTimeout(function () { toast.classList.remove("show"); }, 3500);
     }
   </script>
 </body>
