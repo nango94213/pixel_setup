@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TikTok Ads Split Testing — Test Smarter, Scale Faster</title>
+  <meta name="description" content="A guide to split testing on TikTok Ads Manager: test two versions of your campaigns, find the statistically significant winner, and scale with confidence." />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- FX layers -->
+  <div id="progress"></div>
+  <canvas id="particles"></canvas>
+  <div class="aurora"></div>
+  <div class="spotlight" id="spotlight"></div>
+
+  <header class="hero">
+    <nav class="nav">
+      <span class="brand">SPLIT&nbsp;<b>TEST</b></span>
+      <a class="nav-cta" href="https://ads.tiktok.com/help/article/split-testing?lang=en" target="_blank" rel="noopener">Official Docs ↗</a>
+    </nav>
+
+    <div class="hero-inner">
+      <span class="eyebrow"><span class="dot"></span>TikTok Ads · Experimentation</span>
+      <h1>Stop guessing.<br /><span class="gradient-text">Split test</span> your TikTok ads.</h1>
+      <p class="lede">
+        Run two versions of a campaign head-to-head, split your audience evenly,
+        and let a <strong>90% confidence</strong> model tell you which one actually wins.
+      </p>
+      <div class="hero-actions">
+        <a class="btn btn-primary" href="#how">How it works</a>
+        <a class="btn btn-ghost" href="https://ads.tiktok.com/help/article/create-split-test?lang=en" target="_blank" rel="noopener">Create a split test ↗</a>
+      </div>
+
+      <div class="stats">
+        <div class="stat"><div class="num" data-count="90" data-suffix="%">0%</div><div class="lbl">Confidence to call a winner</div></div>
+        <div class="stat"><div class="num" data-count="2" data-suffix="">0</div><div class="lbl">Versions, head-to-head</div></div>
+        <div class="stat"><div class="num" data-count="9" data-suffix="">0</div><div class="lbl">Variable categories</div></div>
+        <div class="stat"><div class="num" data-count="7" data-suffix="+ days">0</div><div class="lbl">Minimum test window</div></div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- WHAT -->
+    <section class="section">
+      <h2 class="section-title reveal">What is a split test?</h2>
+      <p class="section-sub reveal">
+        Split testing in TikTok Ads Manager lets you test two different versions of your ads
+        to determine which one performs best. Your audience is divided equally, and each group
+        sees only one version — so the comparison is clean, with no overlap.
+      </p>
+
+      <div class="grid grid-3">
+        <article class="tile reveal" data-tilt>
+          <div class="tile-icon">⚖️</div>
+          <h3>Audience isolation</h3>
+          <p>Each audience group exclusively sees one ad group, so your test versions never compete against each other.</p>
+        </article>
+        <article class="tile reveal" data-tilt>
+          <div class="tile-icon">📊</div>
+          <h3>Statistical reliability</h3>
+          <p>A scientifically designed model uses a 90% confidence rate to declare a winner — results are validated only when significant.</p>
+        </article>
+        <article class="tile reveal" data-tilt>
+          <div class="tile-icon">🚀</div>
+          <h3>Scale the winner</h3>
+          <p>When the test ends, keep running the winning ad group and launch follow-up tests to keep refining.</p>
+        </article>
+      </div>
+    </section>
+
+    <!-- VARIABLES -->
+    <section class="section section-alt">
+      <h2 class="section-title reveal">What you can test</h2>
+      <p class="section-sub reveal">TikTok supports split testing across nine categories of variables.</p>
+
+      <div class="chips reveal">
+        <span class="chip">Targeting</span>
+        <span class="chip">Placement</span>
+        <span class="chip">Bidding &amp; Optimization</span>
+        <span class="chip">Budget Strategy</span>
+        <span class="chip">Creative Assets</span>
+        <span class="chip">Catalog</span>
+        <span class="chip">Creative</span>
+        <span class="chip">Custom (multi-variable)</span>
+        <span class="chip">Smart+</span>
+      </div>
+    </section>
+
+    <!-- HOW -->
+    <section class="section" id="how">
+      <h2 class="section-title reveal">How to create one</h2>
+      <p class="section-sub reveal">From the TikTok Ads Manager, it's a guided flow across three tabs.</p>
+
+      <ol class="steps">
+        <li class="reveal">
+          <span class="step-n">1</span>
+          <div>
+            <h3>Start a campaign</h3>
+            <p>In Ads Manager, open the <b>Campaign</b> tab, click <b>Create</b>, pick an objective, then toggle on <b>Create a split test</b>.</p>
+          </div>
+        </li>
+        <li class="reveal">
+          <span class="step-n">2</span>
+          <div>
+            <h3>Configure the Ad Group</h3>
+            <p>Set your control group settings and schedule the test for <b>at least 7 days</b> — enough time for the system to collect a useful sample.</p>
+          </div>
+        </li>
+        <li class="reveal">
+          <span class="step-n">3</span>
+          <div>
+            <h3>Build the Ad</h3>
+            <p>Complete the ad settings for the control group. It serves automatically on its scheduled start date.</p>
+          </div>
+        </li>
+        <li class="reveal">
+          <span class="step-n">4</span>
+          <div>
+            <h3>Set up the Split Test tab</h3>
+            <p>Choose your <b>split test variable</b> and a <b>Key Metric</b> — the system uses the Key Metric to compare the two ad groups and determine the highest-performing ad. Set up the test ad group and click <b>Complete</b>.</p>
+          </div>
+        </li>
+      </ol>
+    </section>
+
+    <!-- TEAM CALLOUT -->
+    <section class="callout reveal">
+      <h2>We're the <span class="gradient-text">Split Test</span> team.</h2>
+      <p>
+        We design experiments, run them at a 90% confidence bar, and turn results into
+        decisions you can scale. Pick a variable, set a key metric, give it 7 days — let the data decide.
+      </p>
+      <a class="btn btn-primary" href="https://ads.tiktok.com/business/en-US" target="_blank" rel="noopener">Explore TikTok For Business ↗</a>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>Built by the Split Test team · Content based on the <a href="https://ads.tiktok.com/help/article/split-testing?lang=en" target="_blank" rel="noopener">official TikTok Ads Manager docs</a>.</p>
+    <p class="fine">Not affiliated with or endorsed by TikTok. © <span id="year"></span></p>
+  </footer>
+
+  <script>
+    // ---- Year ----
+    document.getElementById("year").textContent = new Date().getFullYear();
+
+    // ---- Smooth-scroll for in-page anchors ----
+    document.querySelectorAll('a[href^="#"]').forEach(function (a) {
+      a.addEventListener("click", function (e) {
+        var t = document.querySelector(this.getAttribute("href"));
+        if (t) { e.preventDefault(); t.scrollIntoView({ behavior: "smooth" }); }
+      });
+    });
+
+    // ---- Scroll progress bar ----
+    var progress = document.getElementById("progress");
+    function onScroll() {
+      var h = document.documentElement;
+      var max = h.scrollHeight - h.clientHeight;
+      progress.style.width = (max > 0 ? (h.scrollTop / max) * 100 : 0) + "%";
+    }
+    window.addEventListener("scroll", onScroll, { passive: true });
+
+    // ---- Reveal on scroll ----
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) {
+        if (en.isIntersecting) { en.target.classList.add("in"); io.unobserve(en.target); }
+      });
+    }, { threshold: 0.15 });
+    document.querySelectorAll(".reveal").forEach(function (el) { io.observe(el); });
+
+    // ---- Count-up numbers ----
+    var counted = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) {
+        if (!en.isIntersecting) return;
+        var el = en.target;
+        var target = parseFloat(el.dataset.count);
+        var suffix = el.dataset.suffix || "";
+        var start = null, dur = 1200;
+        function step(ts) {
+          if (!start) start = ts;
+          var p = Math.min((ts - start) / dur, 1);
+          var eased = 1 - Math.pow(1 - p, 3);
+          el.textContent = Math.round(target * eased) + suffix;
+          if (p < 1) requestAnimationFrame(step);
+        }
+        requestAnimationFrame(step);
+        counted.unobserve(el);
+      });
+    }, { threshold: 0.6 });
+    document.querySelectorAll("[data-count]").forEach(function (el) { counted.observe(el); });
+
+    // ---- Cursor spotlight ----
+    var spot = document.getElementById("spotlight");
+    window.addEventListener("pointermove", function (e) {
+      spot.style.opacity = "1";
+      spot.style.left = e.clientX + "px";
+      spot.style.top = e.clientY + "px";
+    });
+    window.addEventListener("pointerleave", function () { spot.style.opacity = "0"; });
+
+    // ---- 3D tilt on tiles ----
+    document.querySelectorAll("[data-tilt]").forEach(function (card) {
+      card.addEventListener("pointermove", function (e) {
+        var r = card.getBoundingClientRect();
+        var px = (e.clientX - r.left) / r.width - 0.5;
+        var py = (e.clientY - r.top) / r.height - 0.5;
+        card.style.transform = "perspective(800px) rotateY(" + (px * 10) + "deg) rotateX(" + (-py * 10) + "deg) translateY(-6px)";
+      });
+      card.addEventListener("pointerleave", function () { card.style.transform = ""; });
+    });
+
+    // ---- Particle background (lightweight canvas) ----
+    (function () {
+      if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+      var c = document.getElementById("particles");
+      var ctx = c.getContext("2d");
+      var dots = [], W, H, DPR = Math.min(window.devicePixelRatio || 1, 2);
+      function resize() {
+        W = c.width = innerWidth * DPR; H = c.height = innerHeight * DPR;
+        c.style.width = innerWidth + "px"; c.style.height = innerHeight + "px";
+        var count = Math.min(90, Math.floor(innerWidth / 16));
+        dots = [];
+        for (var i = 0; i < count; i++) {
+          dots.push({
+            x: Math.random() * W, y: Math.random() * H,
+            vx: (Math.random() - 0.5) * 0.25 * DPR,
+            vy: (Math.random() - 0.5) * 0.25 * DPR,
+            r: (Math.random() * 1.6 + 0.5) * DPR
+          });
+        }
+      }
+      function tick() {
+        ctx.clearRect(0, 0, W, H);
+        for (var i = 0; i < dots.length; i++) {
+          var d = dots[i];
+          d.x += d.vx; d.y += d.vy;
+          if (d.x < 0 || d.x > W) d.vx *= -1;
+          if (d.y < 0 || d.y > H) d.vy *= -1;
+          ctx.beginPath();
+          ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2);
+          ctx.fillStyle = "rgba(37,244,238,0.6)";
+          ctx.fill();
+          // links
+          for (var j = i + 1; j < dots.length; j++) {
+            var o = dots[j], dx = d.x - o.x, dy = d.y - o.y, dist = dx * dx + dy * dy;
+            var max = (120 * DPR) * (120 * DPR);
+            if (dist < max) {
+              ctx.beginPath();
+              ctx.moveTo(d.x, d.y); ctx.lineTo(o.x, o.y);
+              ctx.strokeStyle = "rgba(254,44,85," + (0.12 * (1 - dist / max)) + ")";
+              ctx.lineWidth = DPR * 0.6;
+              ctx.stroke();
+            }
+          }
+        }
+        requestAnimationFrame(tick);
+      }
+      addEventListener("resize", resize);
+      resize(); tick();
+    })();
+  </script>
+</body>
+</html>
