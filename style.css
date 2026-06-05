@@ -239,6 +239,64 @@ main, header, footer { position: relative; z-index: 2; }
 .callout h2 { font-size: clamp(1.9rem, 5vw, 2.8rem); font-weight: 800; letter-spacing: -0.02em; margin-bottom: 1rem; }
 .callout p { color: var(--muted); max-width: 52ch; margin: 0 auto 2rem; font-size: 1.08rem; }
 
+/* ---------- Mock split-test playground ---------- */
+.lab {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 2rem;
+}
+.lab-row { margin-bottom: 1.75rem; }
+.lab-label { display: block; font-weight: 600; margin-bottom: 0.75rem; color: var(--text); }
+.lab-select {
+  width: 100%; max-width: 360px; padding: 0.8rem 1rem;
+  background: var(--surface-2); color: var(--text);
+  border: 1px solid var(--line); border-radius: 12px; font-size: 1rem;
+  cursor: pointer;
+}
+.lab-select:focus { outline: none; border-color: var(--tt-cyan); }
+
+.variants { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; }
+.variant {
+  text-align: left; cursor: pointer; padding: 1.3rem;
+  background: var(--surface-2); color: var(--text);
+  border: 2px solid var(--line); border-radius: 14px;
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.2s ease;
+}
+.variant:hover { transform: translateY(-4px); border-color: var(--tt-cyan); }
+.variant.picked { border-color: var(--tt-pink); box-shadow: 0 0 24px rgba(254, 44, 85, 0.3); }
+.variant-tag {
+  display: inline-block; font-size: 0.7rem; letter-spacing: 0.15em; text-transform: uppercase;
+  color: var(--tt-cyan); margin-bottom: 0.5rem;
+}
+.variant strong { display: block; font-size: 1.15rem; margin-bottom: 0.25rem; }
+.variant small { color: var(--muted); }
+
+.lab-actions { display: flex; flex-wrap: wrap; gap: 0.85rem; margin-bottom: 1.5rem; }
+.lab-actions .btn { border: none; cursor: pointer; font-family: inherit; }
+.btn-ghost { cursor: pointer; font-family: inherit; }
+.lab-actions .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.lab-progress { margin-top: 0.5rem; }
+.bar { height: 12px; background: var(--surface-2); border-radius: 999px; overflow: hidden; }
+.bar span {
+  display: block; height: 100%; width: 0;
+  background: linear-gradient(90deg, var(--tt-cyan), var(--tt-pink));
+  transition: width 0.3s ease;
+}
+.lab-status { color: var(--muted); margin-top: 0.6rem; font-size: 0.95rem; }
+
+.lab-result {
+  margin-top: 1.5rem; padding: 1.5rem;
+  background: rgba(37, 244, 238, 0.06);
+  border: 1px solid rgba(37, 244, 238, 0.25); border-radius: 14px;
+}
+.winner-badge {
+  display: inline-block; font-weight: 700; margin-bottom: 0.5rem;
+  color: var(--tt-cyan);
+}
+.lab-result p { margin-bottom: 1rem; }
+
 /* ---------- Footer ---------- */
 .footer { border-top: 1px solid var(--line); text-align: center; padding: 2.75rem 1.5rem; color: var(--muted); font-size: 0.88rem; }
 .footer a { color: var(--tt-cyan); text-decoration: none; }

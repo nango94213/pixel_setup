@@ -58,7 +58,7 @@
 
   <main>
     <!-- WHAT -->
-    <section class="section">
+    <section class="section" data-view="ViewContent" data-name="what_is_split_test">
       <h2 class="section-title reveal">What is a split test?</h2>
       <p class="section-sub reveal">
         Split testing in TikTok Ads Manager lets you test two different versions of your ads
@@ -138,6 +138,64 @@
           </div>
         </li>
       </ol>
+    </section>
+
+    <!-- INTERACTIVE MOCK SPLIT TEST -->
+    <section class="section" id="playground" data-view="ViewContent" data-name="playground">
+      <h2 class="section-title reveal">Try a mock split test</h2>
+      <p class="section-sub reveal">A live, no-stakes demo. Pick a variable, choose a variant, run it — every interaction fires a TikTok Pixel event so you can watch the data flow.</p>
+
+      <div class="lab reveal">
+        <!-- variable picker -->
+        <div class="lab-row">
+          <label class="lab-label" for="varSel">1 · Split test variable</label>
+          <select id="varSel" class="lab-select">
+            <option>Targeting</option>
+            <option>Placement</option>
+            <option>Bidding &amp; Optimization</option>
+            <option>Budget Strategy</option>
+            <option>Creative Assets</option>
+            <option>Catalog</option>
+            <option>Creative</option>
+            <option>Custom (multi-variable)</option>
+            <option>Smart+</option>
+          </select>
+        </div>
+
+        <!-- variant cards -->
+        <div class="lab-row">
+          <span class="lab-label">2 · Pick the version to test</span>
+          <div class="variants">
+            <button class="variant" data-variant="A">
+              <span class="variant-tag">Variant A</span>
+              <strong>Control</strong>
+              <small>Your current best-performing ad group</small>
+            </button>
+            <button class="variant" data-variant="B">
+              <span class="variant-tag">Variant B</span>
+              <strong>Challenger</strong>
+              <small>The new idea you want to validate</small>
+            </button>
+          </div>
+        </div>
+
+        <!-- actions -->
+        <div class="lab-actions">
+          <button class="btn btn-primary" id="runBtn">▶ Run the test</button>
+          <button class="btn btn-ghost" id="saveBtn">⭐ Save this setup</button>
+        </div>
+
+        <!-- progress + result -->
+        <div class="lab-progress" id="labProg" hidden>
+          <div class="bar"><span id="barFill"></span></div>
+          <p class="lab-status" id="labStatus">Collecting samples…</p>
+        </div>
+        <div class="lab-result" id="labResult" hidden>
+          <span class="winner-badge">🏆 Winner</span>
+          <p id="winnerText"></p>
+          <button class="btn btn-ghost" id="declareBtn">Declare winner &amp; scale</button>
+        </div>
+      </div>
     </section>
 
     <!-- TEAM CALLOUT -->
@@ -288,7 +346,7 @@
         ttqTrack(el.dataset.track, el.dataset.name);
       });
     });
-    // ViewContent: fire once when the "how to create" section scrolls into view
+    // ViewContent: fire once when a tagged section scrolls into view
     var vc = document.querySelectorAll("[data-view]");
     if (vc.length) {
       var vio = new IntersectionObserver(function (entries) {
@@ -301,6 +359,102 @@
       }, { threshold: 0.4 });
       vc.forEach(function (el) { vio.observe(el); });
     }
+
+    // ---- Mock split-test playground ----
+    var chosenVariant = null;
+    var varSel = document.getElementById("varSel");
+
+    // Variable select -> Search
+    if (varSel) {
+      varSel.addEventListener("change", function () {
+        ttqTrack2("Search", "variable_" + varSel.value, { search_string: varSel.value });
+      });
+    }
+
+    // Variant pick -> AddToCart
+    document.querySelectorAll(".variant").forEach(function (b) {
+      b.addEventListener("click", function () {
+        document.querySelectorAll(".variant").forEach(function (x) { x.classList.remove("picked"); });
+        b.classList.add("picked");
+        chosenVariant = b.dataset.variant;
+        ttqTrack2("AddToCart", "variant_" + chosenVariant, { search_string: "Variant " + chosenVariant });
+      });
+    });
+
+    // Save setup -> AddToWishlist
+    var saveBtn = document.getElementById("saveBtn");
+    if (saveBtn) {
+      saveBtn.addEventListener("click", function () {
+        saveBtn.textContent = "✓ Saved";
+        ttqTrack2("AddToWishlist", "saved_setup", { search_string: varSel ? varSel.value : "" });
+      });
+    }
+
+    // Run test -> InitiateCheckout, then PlaceAnOrder on completion
+    var runBtn = document.getElementById("runBtn");
+    if (runBtn) {
+      runBtn.addEventListener("click", function () {
+        if (!chosenVariant) { alert("Pick Variant A or B first 🙂"); return; }
+        ttqTrack2("InitiateCheckout", "run_" + (varSel ? varSel.value : ""), {});
+        var prog = document.getElementById("labProg");
+        var fill = document.getElementById("barFill");
+        var status = document.getElementById("labStatus");
+        var result = document.getElementById("labResult");
+        result.hidden = true; prog.hidden = false; runBtn.disabled = true;
+        var pct = 0;
+        var iv = setInterval(function () {
+          pct = Math.min(pct + Math.random() * 18, 100);
+          fill.style.width = pct + "%";
+          status.textContent = pct < 100 ? "Collecting samples… " + Math.round(pct) + "%" : "Reaching 90% confidence…";
+          if (pct >= 100) {
+            clearInterval(iv);
+            ttqTrack2("PlaceAnOrder", "test_complete", {});
+            var winner = Math.random() > 0.5 ? "A" : "B";
+            var lift = (Math.random() * 22 + 6).toFixed(1);
+            document.getElementById("winnerText").textContent =
+              "Variant " + winner + " wins on " + (varSel ? varSel.value : "your variable") +
+              " — +" + lift + "% on the key metric, at 90% confidence.";
+            result.hidden = false; runBtn.disabled = false;
+            result.scrollIntoView({ behavior: "smooth", block: "nearest" });
+          }
+        }, 350);
+      });
+    }
+
+    // Declare winner -> CompleteRegistration
+    var declareBtn = document.getElementById("declareBtn");
+    if (declareBtn) {
+      declareBtn.addEventListener("click", function () {
+        declareBtn.textContent = "✓ Scaling the winner";
+        ttqTrack2("CompleteRegistration", "winner_declared", {});
+      });
+    }
+
+    // Helper that also passes structured params + value/currency
+    function ttqTrack2(event, name, extra) {
+      if (!(window.ttq && typeof ttq.track === "function")) return;
+      var payload = {
+        contents: [{ content_id: name, content_type: "product", content_name: name }],
+        value: 0,
+        currency: "USD"
+      };
+      if (extra) for (var k in extra) payload[k] = extra[k];
+      ttq.track(event, payload);
+    }
+
+    // Dwell 15s -> CompleteRegistration (engaged visitor)
+    setTimeout(function () { ttqTrack("CompleteRegistration", "dwell_15s"); }, 15000);
+
+    // Scrolled to the very bottom -> SubmitForm
+    var bottomFired = false;
+    window.addEventListener("scroll", function () {
+      if (bottomFired) return;
+      var h = document.documentElement;
+      if (h.scrollTop + h.clientHeight >= h.scrollHeight - 4) {
+        bottomFired = true;
+        ttqTrack("SubmitForm", "reached_bottom");
+      }
+    }, { passive: true });
   </script>
 </body>
 </html>
