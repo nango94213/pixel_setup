@@ -23,19 +23,6 @@ body {
 }
 a { color: inherit; }
 
-/* whole-page breathing glow behind everything */
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  background:
-    radial-gradient(80% 70% at 50% 0%, rgba(37, 244, 238, 0.10), transparent 65%),
-    radial-gradient(80% 70% at 50% 100%, rgba(254, 44, 85, 0.10), transparent 65%);
-  animation: bgBreathe 6s ease-in-out infinite;
-}
-
 /* ---------- Background FX layers ---------- */
 #particles {
   position: fixed;
@@ -53,18 +40,12 @@ body::before {
     radial-gradient(40% 50% at 80% 15%, rgba(37, 244, 238, 0.20), transparent 60%),
     radial-gradient(45% 55% at 60% 90%, rgba(140, 60, 255, 0.18), transparent 60%);
   filter: blur(20px);
-  animation: auroraMove 18s ease-in-out infinite alternate,
-             bgBreathe 6s ease-in-out infinite;
+  animation: auroraMove 18s ease-in-out infinite alternate;
 }
 @keyframes auroraMove {
   0%   { transform: translate3d(-3%, -2%, 0) scale(1); }
   50%  { transform: translate3d(4%, 3%, 0) scale(1.1); }
   100% { transform: translate3d(-2%, 4%, 0) scale(1.05); }
-}
-/* whole-background breathing: gentle brightness + scale pulse */
-@keyframes bgBreathe {
-  0%, 100% { opacity: 0.75; }
-  50%      { opacity: 1; }
 }
 /* cursor spotlight */
 .spotlight {
