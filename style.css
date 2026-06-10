@@ -170,13 +170,17 @@ main, header, footer { position: relative; z-index: 2; }
   .draw-copy, .draw-badge, .draw-title { animation: none; }
 }
 
+/* Square locked via padding-bottom (works on every browser, no flex stretch) */
 .wheel-wrap {
   position: relative; flex: 0 0 auto;
-  width: min(340px, 80vw); aspect-ratio: 1 / 1; height: auto; margin: 0 auto;
+  width: min(340px, 80vw);
+  height: 0; padding-bottom: min(340px, 80vw); /* == width -> perfect square */
+  margin: 0 auto;
 }
-/* spinning disc — the rotating SVG only */
+/* spinning disc — the rotating SVG only, filling the square */
 .wheel {
-  width: 100%; aspect-ratio: 1 / 1; height: auto; border-radius: 50%;
+  position: absolute; inset: 0;
+  border-radius: 50%;
   cursor: pointer; transform: rotate(0deg);
   box-shadow: 0 10px 30px rgba(0,0,0,0.55);
 }
@@ -184,7 +188,7 @@ main, header, footer { position: relative; z-index: 2; }
   width: 100%; height: 100%; display: block; border-radius: 50%;
   background: var(--bg);
 }
-/* golden rim drawn as a fixed (non-rotating) ring on top — stays glued to the disc */
+/* golden rim — fixed (non-rotating) ring filling the same square, stays glued */
 .wheel-wrap::before {
   content: "";
   position: absolute; inset: 0; border-radius: 50%;
@@ -494,6 +498,14 @@ main, header, footer { position: relative; z-index: 2; }
   position: fixed; top: 0; left: 0; height: 3px; width: 0;
   background: linear-gradient(90deg, var(--tt-cyan), var(--tt-pink));
   z-index: 50; box-shadow: 0 0 12px rgba(37,244,238,0.6);
+}
+
+/* ---------- Mobile layout ---------- */
+@media (max-width: 640px) {
+  .draw { flex-direction: column; align-items: center; text-align: center; gap: 1.75rem; }
+  .draw-copy { flex: 0 0 auto; transform-origin: center; }
+  .draw-sub { margin-left: auto; margin-right: auto; }
+  .wheel-wrap { width: min(300px, 78vw); padding-bottom: min(300px, 78vw); }
 }
 
 @media (prefers-reduced-motion: reduce) {
