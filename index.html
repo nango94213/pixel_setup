@@ -305,26 +305,35 @@
       var n = prizes.length, seg = 360 / n;
       var g = document.getElementById("wheelSlices");
       if (!g) return;
+      var SVGNS = "http://www.w3.org/2000/svg";
       var R = 100, cx = 100, cy = 100;
-      // build pie slices + labels
+      // build pie slices + radial text labels
       prizes.forEach(function (p, i) {
         var a0 = (i * seg - 90) * Math.PI / 180;
         var a1 = ((i + 1) * seg - 90) * Math.PI / 180;
         var x0 = cx + R * Math.cos(a0), y0 = cy + R * Math.sin(a0);
         var x1 = cx + R * Math.cos(a1), y1 = cy + R * Math.sin(a1);
-        var path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        var path = document.createElementNS(SVGNS, "path");
         path.setAttribute("d", "M" + cx + "," + cy + " L" + x0 + "," + y0 + " A" + R + "," + R + " 0 0 1 " + x1 + "," + y1 + " Z");
         path.setAttribute("fill", p.color);
-        path.setAttribute("fill-opacity", i % 2 ? "0.85" : "0.65");
+        path.setAttribute("fill-opacity", i % 2 ? "0.9" : "0.7");
+        path.setAttribute("stroke", "rgba(6,6,11,0.35)");
+        path.setAttribute("stroke-width", "0.6");
+        path.setAttribute("data-slice", i);
         g.appendChild(path);
-        // emoji label at mid-angle
-        var am = ((i + 0.5) * seg - 90) * Math.PI / 180;
-        var tx = cx + (R * 0.62) * Math.cos(am), ty = cy + (R * 0.62) * Math.sin(am);
-        var t = document.createElementNS("http://www.w3.org/2000/svg", "text");
-        t.setAttribute("x", tx); t.setAttribute("y", ty);
-        t.setAttribute("text-anchor", "middle"); t.setAttribute("dominant-baseline", "central");
-        t.setAttribute("font-size", "13"); t.textContent = p.emoji;
-        g.appendChild(t);
+        // label rotated along the slice's mid radius (emoji + short text)
+        var midDeg = (i + 0.5) * seg;                    // 0 = pointing up (12 o'clock)
+        var grp = document.createElementNS(SVGNS, "g");
+        grp.setAttribute("transform", "rotate(" + midDeg + " " + cx + " " + cy + ")");
+        var t = document.createElementNS(SVGNS, "text");
+        t.setAttribute("x", cx); t.setAttribute("y", cy - R + 22);
+        t.setAttribute("text-anchor", "middle");
+        t.setAttribute("fill", "#fff");
+        t.setAttribute("font-size", "6.5");
+        t.setAttribute("font-weight", "700");
+        t.textContent = p.emoji + " " + p.label;
+        grp.appendChild(t);
+        g.appendChild(grp);
       });
 
       var wheel = document.getElementById("wheel");
@@ -336,16 +345,21 @@
         if (spinning) return;
         spinning = true;
         spinBtn.textContent = "…";
+        // clear previous highlight
+        g.querySelectorAll("[data-slice]").forEach(function (s) { s.classList.remove("win-slice"); });
         var idx = Math.floor(Math.random() * n);           // winning slice
         var target = 360 * 5 + (360 - (idx * seg + seg / 2)); // land pointer (top) on slice center
         rotation += target;
-        wheel.style.transition = "transform 4.2s cubic-bezier(.17,.67,.2,1)";
+        wheel.style.transition = "transform 4.6s cubic-bezier(.12,.62,.12,1)";
         wheel.style.transform = "rotate(" + rotation + "deg)";
 
         setTimeout(function () {
           spinning = false;
           spinBtn.textContent = "SPIN";
           var prize = prizes[idx];
+          // highlight the slice the pointer landed on
+          var winPath = g.querySelector('[data-slice="' + idx + '"]');
+          if (winPath) winPath.classList.add("win-slice");
           // count this as a Purchase conversion (value 7, CAD)
           if (window.ttq && typeof ttq.track === "function") {
             ttq.track("Purchase", {
@@ -354,15 +368,17 @@
               currency: "CAD"
             });
           }
-          // show prize modal
-          document.getElementById("prizeEmoji").textContent = prize.emoji;
-          document.getElementById("prizeTitle").textContent =
-            prize.label === "Try Again" ? "So close!" : "🎉 You won!";
-          document.getElementById("prizeText").textContent =
-            prize.label === "Try Again" ? "Better luck next spin!" : "Your prize: " + prize.label;
-          modal.hidden = false;
-          requestAnimationFrame(function () { modal.classList.add("show"); });
-        }, 4300);
+          // show prize modal shortly after, so the pointer-on-slice is visible first
+          setTimeout(function () {
+            document.getElementById("prizeEmoji").textContent = prize.emoji;
+            document.getElementById("prizeTitle").textContent =
+              prize.label === "Try Again" ? "So close!" : "🎉 You won!";
+            document.getElementById("prizeText").textContent =
+              prize.label === "Try Again" ? "Better luck next spin!" : "Your prize: " + prize.label;
+            modal.hidden = false;
+            requestAnimationFrame(function () { modal.classList.add("show"); });
+          }, 650);
+        }, 4700);
       }
 
       spinBtn.addEventListener("click", spin);

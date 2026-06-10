@@ -145,29 +145,61 @@ main, header, footer { position: relative; z-index: 2; }
 
 .wheel-wrap {
   position: relative; flex: 0 0 auto;
-  width: 280px; height: 280px; margin: 0 auto;
+  width: 220px; height: 220px; margin: 0 auto;
 }
+/* outer ring / rim for a premium look */
 .wheel {
   width: 100%; height: 100%; border-radius: 50%;
-  box-shadow: 0 0 0 8px rgba(255,255,255,0.06), 0 20px 50px rgba(0,0,0,0.5);
-  cursor: pointer;
-  transform: rotate(0deg);
+  cursor: pointer; transform: rotate(0deg);
+  padding: 6px;
+  background:
+    conic-gradient(from 0deg, #ffd24a, #ff9a3c, #ffd24a, #ff9a3c, #ffd24a);
+  box-shadow:
+    0 0 0 2px rgba(255,255,255,0.15),
+    0 10px 30px rgba(0,0,0,0.55),
+    inset 0 0 18px rgba(0,0,0,0.4);
 }
-.wheel svg { width: 100%; height: 100%; display: block; border-radius: 50%; }
+.wheel svg {
+  width: 100%; height: 100%; display: block; border-radius: 50%;
+  background: var(--bg);
+}
+.wheel [data-slice] { transition: filter 0.3s ease; }
+.wheel .win-slice {
+  filter: brightness(1.45) drop-shadow(0 0 6px rgba(255,255,255,0.6));
+}
+
+/* solid triangular pointer */
 .wheel-pointer {
-  position: absolute; top: -14px; left: 50%; transform: translateX(-50%);
-  z-index: 3; font-size: 1.8rem; color: #ffd24a; line-height: 1;
-  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+  position: absolute; top: -10px; left: 50%; transform: translateX(-50%);
+  z-index: 4; width: 0; height: 0; font-size: 0; color: transparent;
+  border-left: 13px solid transparent;
+  border-right: 13px solid transparent;
+  border-top: 22px solid #ffd24a;
+  filter: drop-shadow(0 3px 5px rgba(0,0,0,0.6));
 }
+.wheel-pointer::after {
+  content: ""; position: absolute; top: -27px; left: -7px;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: #ffd24a; box-shadow: 0 0 0 3px rgba(6,6,11,0.6);
+}
+/* center hub button — sits above the spinning wheel */
 .wheel-hub {
   position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-  z-index: 3; width: 74px; height: 74px; border-radius: 50%; cursor: pointer;
-  border: 4px solid #fff; font-weight: 800; font-size: 0.95rem; font-family: inherit; color: #06060b;
-  background: linear-gradient(135deg, #ffd24a, #ff9a3c);
-  box-shadow: 0 4px 16px rgba(0,0,0,0.5);
-  transition: transform 0.12s ease;
+  z-index: 5; width: 64px; height: 64px; border-radius: 50%; cursor: pointer;
+  border: none; font-weight: 800; font-size: 0.9rem; letter-spacing: 0.04em;
+  font-family: inherit; color: #06060b;
+  background: radial-gradient(circle at 35% 30%, #fff3c4, #ffd24a 45%, #ff9a3c);
+  box-shadow:
+    0 0 0 5px var(--bg),
+    0 0 0 7px rgba(255,210,74,0.5),
+    0 6px 18px rgba(0,0,0,0.55);
+  transition: transform 0.12s ease, box-shadow 0.2s ease;
 }
-.wheel-hub:hover { transform: translate(-50%, -50%) scale(1.06); }
+.wheel-hub:hover {
+  transform: translate(-50%, -50%) scale(1.08);
+  box-shadow: 0 0 0 5px var(--bg), 0 0 0 9px rgba(255,210,74,0.7), 0 8px 24px rgba(0,0,0,0.6);
+}
+.wheel-hub:active { transform: translate(-50%, -50%) scale(0.96); }
 
 /* ---------- Prize modal ---------- */
 .prize-modal {
