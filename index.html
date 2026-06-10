@@ -458,75 +458,54 @@
       card.addEventListener("pointerleave", function () { card.style.transform = ""; });
     });
 
-    // ---- Orbital "shooting star" particles ----
-    // Dots ride concentric orbits, all flowing one direction (clockwise),
-    // with comet-like trails (via fade overlay) + a breathing pulse.
+    // ---- Particle background (lightweight canvas) ----
     (function () {
       if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
       var c = document.getElementById("particles");
       var ctx = c.getContext("2d");
-      var dots = [], W, H, cx, cy, maxR, DPR = Math.min(window.devicePixelRatio || 1, 2);
-      var palette = ["37,244,238", "254,44,85", "140,60,255", "255,210,74"];
-
+      var dots = [], W, H, DPR = Math.min(window.devicePixelRatio || 1, 2);
       function resize() {
         W = c.width = innerWidth * DPR; H = c.height = innerHeight * DPR;
         c.style.width = innerWidth + "px"; c.style.height = innerHeight + "px";
-        cx = W / 2; cy = H / 2;
-        maxR = Math.sqrt(cx * cx + cy * cy) * 1.05; // reach past the corners
-        var count = Math.min(140, Math.floor(innerWidth / 11));
+        var count = Math.min(90, Math.floor(innerWidth / 16));
         dots = [];
         for (var i = 0; i < count; i++) {
-          var radius = (0.08 + Math.random() * 0.95) * maxR;       // distance from center
           dots.push({
-            radius: radius,
-            angle: Math.random() * Math.PI * 2,
-            // same direction (clockwise); inner orbits sweep a touch faster
-            speed: (0.0006 + (1 - radius / maxR) * 0.0016) * (0.7 + Math.random() * 0.6),
-            r: (Math.random() * 1.7 + 0.6) * DPR,
-            col: palette[(Math.random() * palette.length) | 0],
-            phase: Math.random() * Math.PI * 2,                     // breathing offset
-            pulse: 0.6 + Math.random() * 1.4
+            x: Math.random() * W, y: Math.random() * H,
+            vx: (Math.random() - 0.5) * 0.25 * DPR,
+            vy: (Math.random() - 0.5) * 0.25 * DPR,
+            r: (Math.random() * 1.6 + 0.5) * DPR
           });
         }
       }
-
-      function tick(now) {
-        // fade the previous frame instead of clearing -> leaves comet trails
-        ctx.globalCompositeOperation = "source-over";
-        ctx.fillStyle = "rgba(6,6,11,0.18)";
-        ctx.fillRect(0, 0, W, H);
-
-        ctx.globalCompositeOperation = "lighter"; // glowing additive blend
-        var t = now * 0.001;
+      function tick() {
+        ctx.clearRect(0, 0, W, H);
         for (var i = 0; i < dots.length; i++) {
           var d = dots[i];
-          d.angle += d.speed;
-          var x = cx + Math.cos(d.angle) * d.radius;
-          var y = cy + Math.sin(d.angle) * d.radius;
-          // breathing pulse 0.35..1
-          var b = 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(t * d.pulse + d.phase));
-          var rr = d.r * (0.7 + 0.6 * b);
-          // soft glowing dot
-          var grad = ctx.createRadialGradient(x, y, 0, x, y, rr * 3.5);
-          grad.addColorStop(0, "rgba(" + d.col + "," + (0.9 * b) + ")");
-          grad.addColorStop(1, "rgba(" + d.col + ",0)");
-          ctx.fillStyle = grad;
+          d.x += d.vx; d.y += d.vy;
+          if (d.x < 0 || d.x > W) d.vx *= -1;
+          if (d.y < 0 || d.y > H) d.vy *= -1;
           ctx.beginPath();
-          ctx.arc(x, y, rr * 3.5, 0, Math.PI * 2);
+          ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2);
+          ctx.fillStyle = "rgba(37,244,238,0.6)";
           ctx.fill();
-          // bright core
-          ctx.fillStyle = "rgba(" + d.col + "," + b + ")";
-          ctx.beginPath();
-          ctx.arc(x, y, rr * 0.8, 0, Math.PI * 2);
-          ctx.fill();
+          // links
+          for (var j = i + 1; j < dots.length; j++) {
+            var o = dots[j], dx = d.x - o.x, dy = d.y - o.y, dist = dx * dx + dy * dy;
+            var max = (120 * DPR) * (120 * DPR);
+            if (dist < max) {
+              ctx.beginPath();
+              ctx.moveTo(d.x, d.y); ctx.lineTo(o.x, o.y);
+              ctx.strokeStyle = "rgba(254,44,85," + (0.12 * (1 - dist / max)) + ")";
+              ctx.lineWidth = DPR * 0.6;
+              ctx.stroke();
+            }
+          }
         }
-        ctx.globalCompositeOperation = "source-over";
         requestAnimationFrame(tick);
       }
       addEventListener("resize", resize);
-      resize();
-      ctx.fillStyle = "#06060b"; ctx.fillRect(0, 0, W, H); // seed trail buffer
-      requestAnimationFrame(tick);
+      resize(); tick();
     })();
 
     // ---- TikTok Pixel: event tracking ----
