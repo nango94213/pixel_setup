@@ -53,8 +53,37 @@
         <div class="stat"><div class="num" data-count="9" data-suffix="">0</div><div class="lbl">Variable categories</div></div>
         <div class="stat"><div class="num" data-count="7" data-suffix="+ days">0</div><div class="lbl">Minimum test window</div></div>
       </div>
+
+      <!-- Lucky draw wheel -->
+      <div class="draw">
+        <div class="draw-copy">
+          <span class="draw-badge">🎁 Free spin</span>
+          <h2 class="draw-title">Spin to win a prize!</h2>
+          <p class="draw-sub">Test your luck — every spin reveals a reward. Tap the wheel to play.</p>
+        </div>
+
+        <div class="wheel-wrap">
+          <div class="wheel-pointer">▼</div>
+          <div class="wheel" id="wheel">
+            <svg viewBox="0 0 200 200" aria-hidden="true">
+              <g id="wheelSlices"></g>
+            </svg>
+          </div>
+          <button class="wheel-hub" id="spinBtn">SPIN</button>
+        </div>
+      </div>
     </div>
   </header>
+
+  <!-- Prize modal -->
+  <div class="prize-modal" id="prizeModal" hidden>
+    <div class="prize-card">
+      <div class="prize-emoji" id="prizeEmoji">🎉</div>
+      <h3 id="prizeTitle">You won!</h3>
+      <p id="prizeText">Congratulations!</p>
+      <button class="btn btn-primary" id="prizeClose">Claim &amp; close</button>
+    </div>
+  </div>
 
   <main>
     <!-- WHAT -->
@@ -261,21 +290,87 @@
     // ---- Year ----
     document.getElementById("year").textContent = new Date().getFullYear();
 
-    // ---- Fire a Purchase on every visit (value 7, CAD) ----
-    (function firePurchaseOnVisit() {
-      var tries = 0;
-      var iv = setInterval(function () {
-        if (window.ttq && typeof ttq.track === "function") {
-          clearInterval(iv);
-          ttq.track("Purchase", {
-            contents: [{ content_id: "site_visit", content_type: "product", content_name: "Site visit" }],
-            value: 7,
-            currency: "CAD"
-          });
-        } else if (++tries > 50) {
-          clearInterval(iv); // give up after ~10s if pixel never loads
-        }
-      }, 200);
+    // ---- Lucky draw wheel ----
+    (function () {
+      var prizes = [
+        { label: "$50 Ad Credit", emoji: "💰", color: "#fe2c55" },
+        { label: "Free Audit",    emoji: "🔍", color: "#25f4ee" },
+        { label: "Pro Template",  emoji: "📋", color: "#8c3cff" },
+        { label: "1 Month Trial", emoji: "🚀", color: "#fe2c55" },
+        { label: "Strategy Call", emoji: "📞", color: "#25f4ee" },
+        { label: "Mystery Box",   emoji: "🎁", color: "#8c3cff" },
+        { label: "Swag Pack",     emoji: "👕", color: "#fe2c55" },
+        { label: "Try Again",     emoji: "🍀", color: "#25f4ee" }
+      ];
+      var n = prizes.length, seg = 360 / n;
+      var g = document.getElementById("wheelSlices");
+      if (!g) return;
+      var R = 100, cx = 100, cy = 100;
+      // build pie slices + labels
+      prizes.forEach(function (p, i) {
+        var a0 = (i * seg - 90) * Math.PI / 180;
+        var a1 = ((i + 1) * seg - 90) * Math.PI / 180;
+        var x0 = cx + R * Math.cos(a0), y0 = cy + R * Math.sin(a0);
+        var x1 = cx + R * Math.cos(a1), y1 = cy + R * Math.sin(a1);
+        var path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        path.setAttribute("d", "M" + cx + "," + cy + " L" + x0 + "," + y0 + " A" + R + "," + R + " 0 0 1 " + x1 + "," + y1 + " Z");
+        path.setAttribute("fill", p.color);
+        path.setAttribute("fill-opacity", i % 2 ? "0.85" : "0.65");
+        g.appendChild(path);
+        // emoji label at mid-angle
+        var am = ((i + 0.5) * seg - 90) * Math.PI / 180;
+        var tx = cx + (R * 0.62) * Math.cos(am), ty = cy + (R * 0.62) * Math.sin(am);
+        var t = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        t.setAttribute("x", tx); t.setAttribute("y", ty);
+        t.setAttribute("text-anchor", "middle"); t.setAttribute("dominant-baseline", "central");
+        t.setAttribute("font-size", "13"); t.textContent = p.emoji;
+        g.appendChild(t);
+      });
+
+      var wheel = document.getElementById("wheel");
+      var spinBtn = document.getElementById("spinBtn");
+      var modal = document.getElementById("prizeModal");
+      var spinning = false, rotation = 0;
+
+      function spin() {
+        if (spinning) return;
+        spinning = true;
+        spinBtn.textContent = "…";
+        var idx = Math.floor(Math.random() * n);           // winning slice
+        var target = 360 * 5 + (360 - (idx * seg + seg / 2)); // land pointer (top) on slice center
+        rotation += target;
+        wheel.style.transition = "transform 4.2s cubic-bezier(.17,.67,.2,1)";
+        wheel.style.transform = "rotate(" + rotation + "deg)";
+
+        setTimeout(function () {
+          spinning = false;
+          spinBtn.textContent = "SPIN";
+          var prize = prizes[idx];
+          // count this as a Purchase conversion (value 7, CAD)
+          if (window.ttq && typeof ttq.track === "function") {
+            ttq.track("Purchase", {
+              contents: [{ content_id: "spin_prize", content_type: "product", content_name: prize.label }],
+              value: 7,
+              currency: "CAD"
+            });
+          }
+          // show prize modal
+          document.getElementById("prizeEmoji").textContent = prize.emoji;
+          document.getElementById("prizeTitle").textContent =
+            prize.label === "Try Again" ? "So close!" : "🎉 You won!";
+          document.getElementById("prizeText").textContent =
+            prize.label === "Try Again" ? "Better luck next spin!" : "Your prize: " + prize.label;
+          modal.hidden = false;
+          requestAnimationFrame(function () { modal.classList.add("show"); });
+        }, 4300);
+      }
+
+      spinBtn.addEventListener("click", spin);
+      wheel.addEventListener("click", spin);
+      document.getElementById("prizeClose").addEventListener("click", function () {
+        modal.classList.remove("show");
+        setTimeout(function () { modal.hidden = true; }, 250);
+      });
     })();
 
     // ---- Smooth-scroll for in-page anchors ----
