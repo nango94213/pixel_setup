@@ -326,11 +326,14 @@
         var grp = document.createElementNS(SVGNS, "g");
         grp.setAttribute("transform", "rotate(" + midDeg + " " + cx + " " + cy + ")");
         var t = document.createElementNS(SVGNS, "text");
-        t.setAttribute("x", cx); t.setAttribute("y", cy - R + 22);
+        t.setAttribute("x", cx); t.setAttribute("y", cy - R + 20);
         t.setAttribute("text-anchor", "middle");
         t.setAttribute("fill", "#fff");
-        t.setAttribute("font-size", "6.5");
-        t.setAttribute("font-weight", "700");
+        t.setAttribute("font-size", "9");
+        t.setAttribute("font-weight", "800");
+        t.setAttribute("paint-order", "stroke");
+        t.setAttribute("stroke", "rgba(6,6,11,0.45)");
+        t.setAttribute("stroke-width", "0.5");
         t.textContent = p.emoji + " " + p.label;
         grp.appendChild(t);
         g.appendChild(grp);

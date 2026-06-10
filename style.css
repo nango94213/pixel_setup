@@ -145,7 +145,7 @@ main, header, footer { position: relative; z-index: 2; }
 
 .wheel-wrap {
   position: relative; flex: 0 0 auto;
-  width: 220px; height: 220px; margin: 0 auto;
+  width: 340px; height: 340px; max-width: 80vw; margin: 0 auto;
 }
 /* outer ring / rim for a premium look */
 .wheel {
@@ -185,8 +185,8 @@ main, header, footer { position: relative; z-index: 2; }
 /* center hub button — sits above the spinning wheel */
 .wheel-hub {
   position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-  z-index: 5; width: 64px; height: 64px; border-radius: 50%; cursor: pointer;
-  border: none; font-weight: 800; font-size: 0.9rem; letter-spacing: 0.04em;
+  z-index: 5; width: 78px; height: 78px; border-radius: 50%; cursor: pointer;
+  border: none; font-weight: 800; font-size: 1rem; letter-spacing: 0.04em;
   font-family: inherit; color: #06060b;
   background: radial-gradient(circle at 35% 30%, #fff3c4, #ffd24a 45%, #ff9a3c);
   box-shadow:
