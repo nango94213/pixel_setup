@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>TikTok Ads Split Testing — Test Smarter, Scale Faster</title>
   <meta name="description" content="A guide to split testing on TikTok Ads Manager: test two versions of your campaigns, find the statistically significant winner, and scale with confidence." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
 
   <!-- TikTok Pixel Code Start -->
@@ -27,9 +30,17 @@
   <div id="progress"></div>
   <canvas id="particles"></canvas>
   <div class="aurora"></div>
+  <div class="stars" id="stars" aria-hidden="true"></div>
+  <div class="noise" aria-hidden="true"></div>
   <div class="spotlight" id="spotlight"></div>
+  <canvas id="confetti" aria-hidden="true"></canvas>
 
   <header class="hero">
+    <div class="orbs" id="orbs" aria-hidden="true">
+      <span class="orb orb-1"></span>
+      <span class="orb orb-2"></span>
+      <span class="orb orb-3"></span>
+    </div>
     <nav class="nav">
       <span class="brand">SPLIT&nbsp;<b>TEST</b></span>
       <a class="nav-cta" href="https://ads.tiktok.com/help/article/split-testing?lang=en" target="_blank" rel="noopener" data-track="Consult" data-name="official_docs_nav">Official Docs ↗</a>
@@ -75,6 +86,18 @@
       </div>
     </div>
   </header>
+
+  <!-- Scrolling ticker -->
+  <div class="ticker" aria-hidden="true">
+    <div class="ticker-track">
+      <span class="ticker-group">
+        <em>Split Testing</em> ✦ <em>90% Confidence</em> ✦ <em>Scale the Winner</em> ✦ <em>A/B Done Right</em> ✦ <em>7-Day Window</em> ✦ <em>Clean Audience Split</em> ✦ <em>Data &gt; Guessing</em> ✦
+      </span>
+      <span class="ticker-group">
+        <em>Split Testing</em> ✦ <em>90% Confidence</em> ✦ <em>Scale the Winner</em> ✦ <em>A/B Done Right</em> ✦ <em>7-Day Window</em> ✦ <em>Clean Audience Split</em> ✦ <em>Data &gt; Guessing</em> ✦
+      </span>
+    </div>
+  </div>
 
   <!-- Prize modal -->
   <div class="prize-modal" id="prizeModal" hidden>
@@ -265,6 +288,64 @@
       </div>
     </section>
 
+    <!-- TESTIMONIALS -->
+    <section class="section section-alt" id="voices">
+      <h2 class="section-title reveal">What testers are saying</h2>
+      <p class="section-sub reveal">Marketers who stopped guessing and started splitting.</p>
+
+      <div class="grid grid-3 testis">
+        <figure class="testi tile reveal" data-tilt>
+          <div class="testi-stars">★★★★★</div>
+          <blockquote>"We argued about hooks for weeks. One 7-day split test settled it in a single dashboard view."</blockquote>
+          <figcaption>
+            <span class="testi-avatar" style="--av1:#fe2c55;--av2:#8c3cff">AK</span>
+            <span><strong>Aisha K.</strong><small>Performance Lead, DTC skincare</small></span>
+          </figcaption>
+        </figure>
+        <figure class="testi tile reveal" data-tilt>
+          <div class="testi-stars">★★★★★</div>
+          <blockquote>"The 90% confidence bar means I can defend every budget shift to my CFO with actual math."</blockquote>
+          <figcaption>
+            <span class="testi-avatar" style="--av1:#25f4ee;--av2:#8c3cff">JR</span>
+            <span><strong>Jonas R.</strong><small>Growth Manager, mobile gaming</small></span>
+          </figcaption>
+        </figure>
+        <figure class="testi tile reveal" data-tilt>
+          <div class="testi-stars">★★★★★</div>
+          <blockquote>"Clean audience isolation killed our overlap problem. Winner scaled 3× without CPA creep."</blockquote>
+          <figcaption>
+            <span class="testi-avatar" style="--av1:#ffd24a;--av2:#fe2c55">ML</span>
+            <span><strong>Mia L.</strong><small>Media Buyer, ecom agency</small></span>
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- FAQ -->
+    <section class="section" id="faq">
+      <h2 class="section-title reveal">Frequently asked</h2>
+      <p class="section-sub reveal">Quick answers before you launch your first test.</p>
+
+      <div class="faq reveal">
+        <details class="faq-item">
+          <summary>Do both versions really get a fair shot?<span class="faq-icon">+</span></summary>
+          <div class="faq-body"><p>Yes — your audience is divided evenly and each group exclusively sees one ad group, so the two versions never compete for the same impression.</p></div>
+        </details>
+        <details class="faq-item">
+          <summary>How long should I let a test run?<span class="faq-icon">+</span></summary>
+          <div class="faq-body"><p>Schedule at least 7 days. Shorter windows rarely collect enough samples for the system to reach a statistically significant verdict.</p></div>
+        </details>
+        <details class="faq-item">
+          <summary>What happens when a winner is declared?<span class="faq-icon">+</span></summary>
+          <div class="faq-body"><p>Keep the winning ad group running, pause the loser, and queue up a follow-up test — iterate on the winner instead of starting from scratch.</p></div>
+        </details>
+        <details class="faq-item">
+          <summary>Can I test more than one variable at once?<span class="faq-icon">+</span></summary>
+          <div class="faq-body"><p>Use the Custom (multi-variable) category for that — but for the cleanest read, test one variable at a time so you know exactly what moved the metric.</p></div>
+        </details>
+      </div>
+    </section>
+
     <!-- TEAM CALLOUT -->
     <section class="callout reveal">
       <h2>We're the <span class="gradient-text">Split Test</span> team.</h2>
@@ -281,6 +362,9 @@
     🔔 Fire ALL events
   </button>
   <div id="fireToast" class="fire-toast" hidden></div>
+
+  <!-- Back to top -->
+  <button id="toTop" class="to-top" title="Back to top" aria-label="Back to top">↑</button>
 
   <footer class="footer">
     <p>Built by the Split Test team · Content based on the <a href="https://ads.tiktok.com/help/article/split-testing?lang=en" target="_blank" rel="noopener">official TikTok Ads Manager docs</a>.</p>
@@ -717,6 +801,139 @@
       toast.classList.add("show");
       clearTimeout(showToast._t);
       showToast._t = setTimeout(function () { toast.classList.remove("show"); }, 3500);
+    }
+
+    /* ================================================================
+       Visual FX only below — no TikTok Pixel events are touched here.
+       ================================================================ */
+    var REDUCED = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    // ---- Shooting stars ----
+    (function () {
+      if (REDUCED) return;
+      var wrap = document.getElementById("stars");
+      if (!wrap) return;
+      for (var i = 0; i < 6; i++) {
+        var s = document.createElement("span");
+        s.className = "star";
+        s.style.top = (Math.random() * 45) + "%";
+        s.style.left = (Math.random() * 90) + "%";
+        s.style.animationDelay = (Math.random() * 14).toFixed(2) + "s";
+        s.style.animationDuration = (4 + Math.random() * 5).toFixed(2) + "s";
+        wrap.appendChild(s);
+      }
+    })();
+
+    // ---- Hero orbs: mouse parallax ----
+    (function () {
+      if (REDUCED) return;
+      var orbs = document.querySelectorAll("#orbs .orb");
+      if (!orbs.length) return;
+      window.addEventListener("pointermove", function (e) {
+        var nx = e.clientX / innerWidth - 0.5;
+        var ny = e.clientY / innerHeight - 0.5;
+        orbs.forEach(function (o, i) {
+          var depth = (i + 1) * 14;
+          o.style.translate = (nx * depth) + "px " + (ny * depth) + "px";
+        });
+      }, { passive: true });
+    })();
+
+    // ---- Confetti burst when the prize modal opens ----
+    (function () {
+      var cv = document.getElementById("confetti");
+      var pm = document.getElementById("prizeModal");
+      if (!cv || !pm || REDUCED) return;
+      var cx = cv.getContext("2d"), pieces = [], raf = null;
+      var COLORS = ["#fe2c55", "#25f4ee", "#8c3cff", "#ffd24a", "#ff9a3c", "#ffffff"];
+      function size() { cv.width = innerWidth; cv.height = innerHeight; }
+      function burst() {
+        size();
+        pieces = [];
+        for (var i = 0; i < 160; i++) {
+          pieces.push({
+            x: innerWidth / 2 + (Math.random() - 0.5) * innerWidth * 0.4,
+            y: -20 - Math.random() * innerHeight * 0.25,
+            w: 6 + Math.random() * 7, h: 8 + Math.random() * 10,
+            vx: (Math.random() - 0.5) * 3.2,
+            vy: 2 + Math.random() * 3.5,
+            rot: Math.random() * Math.PI * 2,
+            vr: (Math.random() - 0.5) * 0.25,
+            color: COLORS[Math.floor(Math.random() * COLORS.length)],
+            wob: Math.random() * Math.PI * 2
+          });
+        }
+        cancelAnimationFrame(raf);
+        tick();
+      }
+      function tick() {
+        cx.clearRect(0, 0, cv.width, cv.height);
+        var alive = false;
+        pieces.forEach(function (p) {
+          p.wob += 0.08;
+          p.x += p.vx + Math.sin(p.wob) * 0.9;
+          p.y += p.vy;
+          p.rot += p.vr;
+          if (p.y < cv.height + 30) alive = true;
+          cx.save();
+          cx.translate(p.x, p.y);
+          cx.rotate(p.rot);
+          cx.fillStyle = p.color;
+          cx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+          cx.restore();
+        });
+        if (alive) raf = requestAnimationFrame(tick);
+        else cx.clearRect(0, 0, cv.width, cv.height);
+      }
+      // watch the existing modal for its .show class — no wheel code modified
+      new MutationObserver(function (muts) {
+        muts.forEach(function (m) {
+          if (m.attributeName === "class" && pm.classList.contains("show")) burst();
+        });
+      }).observe(pm, { attributes: true });
+      addEventListener("resize", size);
+    })();
+
+    // ---- Card glare follows the cursor (pairs with the 3D tilt) ----
+    document.querySelectorAll("[data-tilt]").forEach(function (card) {
+      card.addEventListener("pointermove", function (e) {
+        var r = card.getBoundingClientRect();
+        card.style.setProperty("--gx", ((e.clientX - r.left) / r.width * 100) + "%");
+        card.style.setProperty("--gy", ((e.clientY - r.top) / r.height * 100) + "%");
+      });
+    });
+
+    // ---- Magnetic buttons ----
+    (function () {
+      if (REDUCED || !window.matchMedia("(hover: hover)").matches) return;
+      document.querySelectorAll(".btn, .fire-all").forEach(function (b) {
+        b.addEventListener("pointermove", function (e) {
+          var r = b.getBoundingClientRect();
+          var mx = (e.clientX - r.left - r.width / 2) * 0.18;
+          var my = (e.clientY - r.top - r.height / 2) * 0.3;
+          b.style.translate = mx + "px " + my + "px";
+        });
+        b.addEventListener("pointerleave", function () { b.style.translate = ""; });
+      });
+    })();
+
+    // ---- FAQ accordion: exclusive open ----
+    var faqItems = document.querySelectorAll(".faq-item");
+    faqItems.forEach(function (d) {
+      d.addEventListener("toggle", function () {
+        if (d.open) faqItems.forEach(function (o) { if (o !== d) o.open = false; });
+      });
+    });
+
+    // ---- Back to top ----
+    var toTop = document.getElementById("toTop");
+    if (toTop) {
+      window.addEventListener("scroll", function () {
+        toTop.classList.toggle("show", document.documentElement.scrollTop > 600);
+      }, { passive: true });
+      toTop.addEventListener("click", function () {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      });
     }
   </script>
 </body>
