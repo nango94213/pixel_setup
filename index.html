@@ -55,6 +55,7 @@
       <a href="#faq">FAQ</a>
     </div>
     <a class="glass-nav-cta" href="#draw">🎁 Spin</a>
+    <a class="glass-nav-cta game" href="#game">🕹️ Game</a>
   </nav>
 
   <header class="hero">
@@ -829,8 +830,8 @@
     }
 
     // ---- Neon Whack-a-Gift arcade ----
-    // Every game interaction (start + each whack) counts as a Purchase
-    // (value 7, CAD) — same payload shape as the prize wheel.
+    // Playing a round counts as ONE Purchase (value 7, CAD), fired when
+    // the round starts — same payload shape as the prize wheel.
     (function () {
       var grid = document.getElementById("gGrid");
       if (!grid) return;
@@ -843,9 +844,9 @@
       var bestEl = document.getElementById("gBest");
 
       var TYPES = [
-        { emoji: "🎁", val: 1,  weight: 62, cls: "hit",  name: "whack_gift" },
-        { emoji: "💎", val: 3,  weight: 18, cls: "hit",  name: "whack_gem" },
-        { emoji: "💣", val: -2, weight: 20, cls: "boom", name: "whack_bomb" }
+        { emoji: "🎁", val: 1,  weight: 62, cls: "hit" },
+        { emoji: "💎", val: 3,  weight: 18, cls: "hit" },
+        { emoji: "💣", val: -2, weight: 20, cls: "boom" }
       ];
       var cells = [], active = {}, score = 0, timeLeft = 30, best = 0;
       var playing = false, spawnTimer = null, clockTimer = null, spawnGap = 750;
@@ -923,7 +924,6 @@
         void c.offsetWidth;                        // restart the animation
         c.classList.add(type.cls);
         floatScore(c, type.val > 0 ? "+" + type.val : "" + type.val, type.val > 0);
-        purchase(type.name);
       }
 
       function floatScore(cell, text, good) {

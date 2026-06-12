@@ -909,6 +909,12 @@ html { scrollbar-color: var(--surface-2) var(--bg); }
   transition: transform 0.2s var(--ease-out), box-shadow 0.25s ease;
 }
 .glass-nav-cta:hover { transform: translateY(-2px); box-shadow: 0 10px 26px rgba(255, 210, 74, 0.5); }
+.glass-nav-cta.game {
+  margin-left: -0.5rem;
+  background: linear-gradient(135deg, #25f4ee, #a06bff);
+  box-shadow: 0 6px 18px rgba(140, 60, 255, 0.35);
+}
+.glass-nav-cta.game:hover { box-shadow: 0 10px 26px rgba(140, 60, 255, 0.55); }
 
 /* --- trailing cursor ring --- */
 .cursor-ring {
