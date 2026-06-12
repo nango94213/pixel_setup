@@ -753,3 +753,211 @@ html { scrollbar-color: var(--surface-2) var(--bg); }
   .section-title::after { width: 84px; }
   .star { display: none; }
 }
+
+/* ================================================================
+   Glass & silk layer — glassmorphism + buttery interactions
+   (visual only; pixel events untouched)
+   ================================================================ */
+:root { --ease-out: cubic-bezier(0.22, 1, 0.36, 1); }
+
+/* --- glass intro veil: two frosted panes slide apart on load --- */
+.intro {
+  position: fixed; inset: 0; z-index: 200; pointer-events: none;
+  animation: introGone 0s linear 1.8s forwards;
+}
+@keyframes introGone { to { visibility: hidden; } }
+.intro-pane {
+  position: absolute; top: 0; bottom: 0; width: 50.5%;
+  background: linear-gradient(160deg, rgba(22, 22, 34, 0.72), rgba(8, 8, 15, 0.86));
+  -webkit-backdrop-filter: blur(28px) saturate(140%);
+  backdrop-filter: blur(28px) saturate(140%);
+}
+.intro-left {
+  left: 0; box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.10);
+  animation: paneL 0.95s cubic-bezier(0.76, 0, 0.18, 1) 0.85s forwards;
+}
+.intro-right {
+  right: 0; box-shadow: inset 1px 0 0 rgba(255, 255, 255, 0.10);
+  animation: paneR 0.95s cubic-bezier(0.76, 0, 0.18, 1) 0.85s forwards;
+}
+@keyframes paneL { to { transform: translateX(-102%); } }
+@keyframes paneR { to { transform: translateX(102%); } }
+/* glowing seam between the panes */
+.intro::before {
+  content: ""; position: absolute; left: 50%; top: 0; bottom: 0; width: 2px; translate: -50% 0;
+  background: linear-gradient(180deg, transparent, rgba(37, 244, 238, 0.9), rgba(254, 44, 85, 0.9), transparent);
+  filter: drop-shadow(0 0 12px rgba(37, 244, 238, 0.8));
+  animation: seamOut 0.35s ease 0.85s forwards;
+}
+@keyframes seamOut { to { opacity: 0; } }
+.intro-mark {
+  position: absolute; top: 50%; left: 50%; z-index: 1;
+  transform: translate(-50%, -50%);
+  font-weight: 800; letter-spacing: 0.3em; font-size: clamp(1.3rem, 4vw, 2.1rem);
+  animation: markIn 0.7s var(--ease-out) 0.1s backwards,
+             markOut 0.45s ease 0.8s forwards;
+}
+.intro-mark b {
+  background: linear-gradient(90deg, var(--tt-cyan), var(--tt-pink));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+@keyframes markIn { from { opacity: 0; transform: translate(-50%, -50%) scale(0.82); filter: blur(12px); } }
+@keyframes markOut { to { opacity: 0; transform: translate(-50%, -50%) scale(1.2); filter: blur(10px); } }
+
+/* --- hero entrance: staggered rise-in behind the opening glass --- */
+@keyframes riseIn {
+  from { opacity: 0; transform: translateY(42px); filter: blur(14px); }
+  to   { opacity: 1; transform: none; filter: none; }
+}
+.nav               { animation: riseIn 0.8s var(--ease-out) 0.95s backwards; }
+.hero .eyebrow     { animation: riseIn 0.9s var(--ease-out) 1.05s backwards; }
+.hero h1           { animation: riseIn 0.95s var(--ease-out) 1.18s backwards; }
+.hero .lede        { animation: riseIn 0.95s var(--ease-out) 1.32s backwards; }
+.hero .hero-actions{ animation: riseIn 0.95s var(--ease-out) 1.46s backwards; }
+.hero .stats       { animation: riseIn 1s var(--ease-out) 1.6s backwards; }
+.hero .draw        { animation: riseIn 1s var(--ease-out) 1.74s backwards; }
+
+/* --- reveal upgrade: blur-in via animation + staggered children --- */
+.reveal { opacity: 0; transform: none; filter: none; transition: none; }
+.reveal.in { opacity: 1; animation: revealIn 0.9s var(--ease-out) backwards; }
+@keyframes revealIn {
+  from { opacity: 0; transform: translateY(36px) scale(0.985); filter: blur(12px); }
+}
+.grid > .reveal.in:nth-child(2)  { animation-delay: 0.12s; }
+.grid > .reveal.in:nth-child(3)  { animation-delay: 0.24s; }
+.steps .reveal.in:nth-child(2)   { animation-delay: 0.10s; }
+.steps .reveal.in:nth-child(3)   { animation-delay: 0.20s; }
+.steps .reveal.in:nth-child(4)   { animation-delay: 0.30s; }
+
+/* --- true glassmorphism for every card surface --- */
+.tile, .lab, .steps li, .q, .callout, .faq-item {
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.03) 60%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  backdrop-filter: blur(18px) saturate(160%);
+  border-color: rgba(255, 255, 255, 0.13);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 20px 50px rgba(0, 0, 0, 0.30);
+}
+/* tilt is now fully JS-lerped — keep CSS transitions off transform */
+.tile { transition: border-color 0.25s ease, box-shadow 0.35s ease; }
+.chip, .variant, .lab-select, .opts button {
+  background: rgba(255, 255, 255, 0.055);
+  -webkit-backdrop-filter: blur(12px) saturate(150%);
+  backdrop-filter: blur(12px) saturate(150%);
+}
+.prize-card {
+  background: linear-gradient(165deg, rgba(30, 30, 46, 0.72), rgba(10, 10, 18, 0.84));
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  backdrop-filter: blur(24px) saturate(160%);
+  position: relative; overflow: hidden;
+}
+.fire-toast {
+  background: rgba(26, 26, 40, 0.7);
+  -webkit-backdrop-filter: blur(14px) saturate(150%);
+  backdrop-filter: blur(14px) saturate(150%);
+}
+.ticker {
+  -webkit-backdrop-filter: blur(10px) saturate(140%);
+  backdrop-filter: blur(10px) saturate(140%);
+}
+
+/* --- sliding glass reflection sweeping across big surfaces --- */
+.lab, .callout { overflow: hidden; }
+.lab { position: relative; }
+.lab::after, .callout::before, .prize-card::after {
+  content: ""; position: absolute; top: -60%; bottom: -60%; left: -45%; width: 38%;
+  background: linear-gradient(100deg,
+    transparent,
+    rgba(255, 255, 255, 0.045) 42%,
+    rgba(255, 255, 255, 0.13) 50%,
+    rgba(255, 255, 255, 0.045) 58%,
+    transparent);
+  transform: rotate(12deg); pointer-events: none;
+  animation: glassSlide 7s ease-in-out infinite;
+}
+@keyframes glassSlide {
+  0%, 55% { left: -45%; }
+  95%, 100% { left: 135%; }
+}
+
+/* --- floating glass shards in the hero --- */
+.shard {
+  position: absolute; border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: linear-gradient(150deg, rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0.02));
+  -webkit-backdrop-filter: blur(8px) saturate(150%);
+  backdrop-filter: blur(8px) saturate(150%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.20), 0 24px 60px rgba(0, 0, 0, 0.35);
+  transition: translate 0.45s ease-out;
+}
+.shard-1 { width: 150px; height: 150px; top: 14%; right: 10%; rotate: 14deg;
+  animation: shardFloat 13s ease-in-out infinite alternate; }
+.shard-2 { width: 90px; height: 90px; top: 56%; right: 26%; rotate: -10deg;
+  animation: shardFloat 16s ease-in-out infinite alternate-reverse; }
+.shard-3 { width: 110px; height: 110px; top: 30%; left: 5%; rotate: 8deg;
+  animation: shardFloat 19s ease-in-out infinite alternate; }
+@keyframes shardFloat {
+  from { transform: translateY(-14px); }
+  to   { transform: translateY(18px); }
+}
+
+/* --- floating glass pill nav --- */
+.glass-nav {
+  position: fixed; top: 0.9rem; left: 50%; z-index: 70;
+  display: flex; align-items: center; gap: 1.1rem;
+  padding: 0.55rem 0.7rem 0.55rem 1.25rem; border-radius: 999px;
+  background: linear-gradient(120deg, rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0.04));
+  -webkit-backdrop-filter: blur(22px) saturate(170%);
+  backdrop-filter: blur(22px) saturate(170%);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  transform: translateX(-50%) translateY(-140%); opacity: 0;
+  transition: transform 0.6s var(--ease-out), opacity 0.45s ease;
+}
+.glass-nav.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+.glass-nav .brand { font-size: 0.78rem; }
+.glass-nav-links { display: flex; gap: 0.2rem; }
+.glass-nav-links a {
+  padding: 0.45rem 0.85rem; border-radius: 999px; font-size: 0.85rem;
+  color: var(--muted); text-decoration: none;
+  transition: background 0.25s ease, color 0.25s ease;
+}
+.glass-nav-links a:hover { background: rgba(255, 255, 255, 0.10); color: var(--text); }
+.glass-nav-cta {
+  font-size: 0.85rem; font-weight: 700; color: #06060b; text-decoration: none;
+  padding: 0.5rem 1rem; border-radius: 999px;
+  background: linear-gradient(135deg, #ffd24a, #ff9a3c);
+  box-shadow: 0 6px 18px rgba(255, 210, 74, 0.35);
+  transition: transform 0.2s var(--ease-out), box-shadow 0.25s ease;
+}
+.glass-nav-cta:hover { transform: translateY(-2px); box-shadow: 0 10px 26px rgba(255, 210, 74, 0.5); }
+
+/* --- trailing cursor ring --- */
+.cursor-ring {
+  position: fixed; top: 0; left: 0; z-index: 130;
+  width: 38px; height: 38px; border-radius: 50%;
+  border: 1.5px solid rgba(37, 244, 238, 0.65);
+  box-shadow: 0 0 18px rgba(37, 244, 238, 0.35), inset 0 0 10px rgba(37, 244, 238, 0.12);
+  pointer-events: none; opacity: 0; will-change: transform;
+  transition: opacity 0.3s ease;
+}
+.cursor-ring.on { opacity: 1; }
+@media (pointer: coarse) { .cursor-ring { display: none; } }
+
+/* --- silkier magnetic buttons: translate eased instead of snapping --- */
+.btn, .fire-all {
+  transition: translate 0.3s var(--ease-out), transform 0.15s ease,
+              box-shadow 0.25s ease, border-color 0.15s ease;
+}
+
+@media (max-width: 640px) {
+  .shard-2, .shard-3 { display: none; }
+  .shard-1 { width: 100px; height: 100px; }
+  .glass-nav { gap: 0.7rem; padding-left: 1rem; }
+  .glass-nav-links { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .intro, .cursor-ring, .shard { display: none; }
+  .reveal { opacity: 1; }
+  .glass-nav { transition: none; }
+}
