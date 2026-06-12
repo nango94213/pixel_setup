@@ -879,27 +879,6 @@ html { scrollbar-color: var(--surface-2) var(--bg); }
   95%, 100% { left: 135%; }
 }
 
-/* --- floating glass shards in the hero --- */
-.shard {
-  position: absolute; border-radius: 22px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  background: linear-gradient(150deg, rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0.02));
-  -webkit-backdrop-filter: blur(8px) saturate(150%);
-  backdrop-filter: blur(8px) saturate(150%);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.20), 0 24px 60px rgba(0, 0, 0, 0.35);
-  transition: translate 0.45s ease-out;
-}
-.shard-1 { width: 150px; height: 150px; top: 14%; right: 10%; rotate: 14deg;
-  animation: shardFloat 13s ease-in-out infinite alternate; }
-.shard-2 { width: 90px; height: 90px; top: 56%; right: 26%; rotate: -10deg;
-  animation: shardFloat 16s ease-in-out infinite alternate-reverse; }
-.shard-3 { width: 110px; height: 110px; top: 30%; left: 5%; rotate: 8deg;
-  animation: shardFloat 19s ease-in-out infinite alternate; }
-@keyframes shardFloat {
-  from { transform: translateY(-14px); }
-  to   { transform: translateY(18px); }
-}
-
 /* --- floating glass pill nav --- */
 .glass-nav {
   position: fixed; top: 0.9rem; left: 50%; z-index: 70;
@@ -949,15 +928,75 @@ html { scrollbar-color: var(--surface-2) var(--bg); }
               box-shadow 0.25s ease, border-color 0.15s ease;
 }
 
+/* --- neon spark canvas (cursor trail + click bursts) --- */
+#sparks { position: fixed; inset: 0; z-index: 115; pointer-events: none; }
+
+/* --- twinkling micro-stars --- */
+.twinkle {
+  position: absolute; width: 3px; height: 3px; border-radius: 50%; background: #fff;
+  box-shadow: 0 0 6px rgba(37, 244, 238, 0.9), 0 0 14px rgba(37, 244, 238, 0.45);
+  opacity: 0;
+  animation: twinkle 4s ease-in-out infinite;
+}
+@keyframes twinkle {
+  0%, 100% { opacity: 0; transform: scale(0.4); }
+  50%      { opacity: 0.9; transform: scale(1); }
+}
+
+/* --- rotating neon border on tiles while hovered --- */
+@property --ang {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+.tile::before {
+  background: conic-gradient(from var(--ang, 0deg),
+    rgba(37, 244, 238, 0.7), rgba(140, 60, 255, 0.45),
+    rgba(254, 44, 85, 0.7), rgba(255, 210, 74, 0.5),
+    rgba(37, 244, 238, 0.7));
+}
+.tile:hover::before { animation: spinAng 3s linear infinite; }
+@keyframes spinAng { to { --ang: 360deg; } }
+
+/* --- rotating aura halo behind the prize wheel --- */
+.wheel-wrap::after {
+  content: ""; position: absolute; inset: -16px; border-radius: 50%;
+  z-index: 0; pointer-events: none;
+  background: conic-gradient(from 0deg,
+    rgba(254, 44, 85, 0.55), rgba(37, 244, 238, 0.55),
+    rgba(255, 210, 74, 0.55), rgba(140, 60, 255, 0.5),
+    rgba(254, 44, 85, 0.55));
+  filter: blur(18px); opacity: 0.55;
+  animation: wheelAura 6s linear infinite;
+}
+@keyframes wheelAura { to { transform: rotate(360deg); } }
+
+/* --- breathing neon glow on the hero stat numbers --- */
+.stat .num { animation: statGlow 3.2s ease-in-out infinite; }
+@keyframes statGlow {
+  0%, 100% { filter: drop-shadow(0 0 5px rgba(37, 244, 238, 0.25)); }
+  50%      { filter: drop-shadow(0 0 16px rgba(254, 44, 85, 0.45)); }
+}
+
+/* --- hero orbs slowly cycle through the spectrum --- */
+.orb-1 { animation: orbFloat 11s ease-in-out infinite alternate, orbHue 21s linear infinite; }
+.orb-2 { animation: orbFloat 14s ease-in-out infinite alternate-reverse, orbHue 27s linear infinite reverse; }
+.orb-3 { animation: orbFloat 17s ease-in-out infinite alternate, orbHue 33s linear infinite; }
+@keyframes orbHue {
+  from { filter: blur(46px) hue-rotate(0deg); }
+  to   { filter: blur(46px) hue-rotate(360deg); }
+}
+
+/* anchors land below the floating glass nav */
+html { scroll-padding-top: 90px; }
+
 @media (max-width: 640px) {
-  .shard-2, .shard-3 { display: none; }
-  .shard-1 { width: 100px; height: 100px; }
   .glass-nav { gap: 0.7rem; padding-left: 1rem; }
   .glass-nav-links { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .intro, .cursor-ring, .shard { display: none; }
+  .intro, .cursor-ring, .twinkle, #sparks { display: none; }
   .reveal { opacity: 1; }
   .glass-nav { transition: none; }
 }
