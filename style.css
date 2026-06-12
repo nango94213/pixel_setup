@@ -990,6 +990,29 @@ html { scrollbar-color: var(--surface-2) var(--bg); }
 /* anchors land below the floating glass nav */
 html { scroll-padding-top: 90px; }
 
+/* --- touch-only FX (desktop pointer devices are unaffected) --- */
+.tap-ring {
+  position: fixed; z-index: 116; pointer-events: none;
+  width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%;
+  border: 2px solid rgba(37, 244, 238, 0.9);
+  box-shadow: 0 0 14px rgba(37, 244, 238, 0.7), inset 0 0 8px rgba(254, 44, 85, 0.5);
+  animation: tapRing 0.65s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+@keyframes tapRing {
+  to { transform: scale(7); opacity: 0; border-width: 1px; }
+}
+@media (hover: none) {
+  /* pressed-glass squish feedback instead of hover states */
+  .tile:active, .variant:active, .chip:active, .faq-item summary:active, .steps li:active {
+    transform: scale(0.975);
+    transition: transform 0.12s ease;
+  }
+  .btn:active, .fire-all:active, .opts button:active, .glass-nav-cta:active, .lab-select:active {
+    transform: scale(0.94);
+    transition: transform 0.12s ease;
+  }
+}
+
 @media (max-width: 640px) {
   .glass-nav { gap: 0.7rem; padding-left: 1rem; }
   .glass-nav-links { display: none; }

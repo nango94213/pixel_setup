@@ -561,7 +561,8 @@
       }
     })();
 
-    // ---- 3D tilt on tiles (rAF-lerped for buttery motion) ----
+    // ---- 3D tilt on tiles (rAF-lerped; hover devices only — touch gets :active squish) ----
+    if (window.matchMedia("(hover: hover)").matches)
     document.querySelectorAll("[data-tilt]").forEach(function (card) {
       var rx = 0, ry = 0, lift = 0, trx = 0, tryy = 0, tlift = 0, raf = null, hov = false;
       function frame() {
@@ -1041,9 +1042,10 @@
       }
     })();
 
-    // ---- Neon spark engine: cursor comet trail + click bursts ----
+    // ---- Neon spark engine: cursor/finger trail + tap/click bursts ----
     (function () {
-      if (REDUCED || !window.matchMedia("(pointer: fine)").matches) return;
+      if (REDUCED) return;
+      var FINE = window.matchMedia("(pointer: fine)").matches;
       var c = document.getElementById("sparks");
       if (!c) return;
       var ctx = c.getContext("2d");
@@ -1067,10 +1069,24 @@
         }
         if (ps.length > 320) ps.splice(0, ps.length - 320);
       }
-      addEventListener("pointermove", function (e) {
-        var now = performance.now();
-        if (now - last > 26) { last = now; add(e.clientX, e.clientY, false); }
-      }, { passive: true });
+      if (FINE) {
+        // desktop: comet trail follows the mouse
+        addEventListener("pointermove", function (e) {
+          var now = performance.now();
+          if (now - last > 26) { last = now; add(e.clientX, e.clientY, false); }
+        }, { passive: true });
+      } else {
+        // touch: sparks stream from the finger while swiping/scrolling
+        addEventListener("touchmove", function (e) {
+          var now = performance.now();
+          if (now - last > 22) {
+            last = now;
+            var t = e.touches[0];
+            add(t.clientX, t.clientY, false);
+            add(t.clientX, t.clientY, false);
+          }
+        }, { passive: true });
+      }
       addEventListener("pointerdown", function (e) { add(e.clientX, e.clientY, true); });
       (function tick() {
         ctx.clearRect(0, 0, c.width, c.height);
@@ -1091,6 +1107,40 @@
         ctx.globalCompositeOperation = "source-over";
         requestAnimationFrame(tick);
       })();
+    })();
+
+    // ---- Touch-only FX: tap ripple rings + gyroscope parallax ----
+    // (gated to coarse pointers, so desktop behavior is unchanged)
+    (function () {
+      if (REDUCED || window.matchMedia("(pointer: fine)").matches) return;
+
+      // expanding neon ring wherever you tap
+      document.addEventListener("pointerdown", function (e) {
+        var r = document.createElement("span");
+        r.className = "tap-ring";
+        r.style.left = e.clientX + "px";
+        r.style.top = e.clientY + "px";
+        document.body.appendChild(r);
+        setTimeout(function () { r.remove(); }, 700);
+      });
+
+      // tilt the phone -> aurora orbs drift (parallax without a mouse)
+      if (window.DeviceOrientationEvent) {
+        var orbs = document.querySelectorAll("#orbs .orb");
+        if (!orbs.length) return;
+        var base = null;
+        window.addEventListener("deviceorientation", function (ev) {
+          if (ev.beta == null || ev.gamma == null) return;
+          if (base === null) base = ev.beta;
+          base += (ev.beta - base) * 0.005;   // slowly re-center to how you hold it
+          var nx = Math.max(-1, Math.min(1, ev.gamma / 28));
+          var ny = Math.max(-1, Math.min(1, (ev.beta - base) / 28));
+          orbs.forEach(function (o, i) {
+            var depth = (i + 1) * 16;
+            o.style.translate = (nx * depth).toFixed(1) + "px " + (ny * depth).toFixed(1) + "px";
+          });
+        });
+      }
     })();
   </script>
 </body>
