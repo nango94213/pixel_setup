@@ -132,6 +132,13 @@
     </div>
   </div>
 
+  <!-- 3D CUBE (right under the spin wheel / hero) -->
+  <section class="section" id="cube" data-view="ViewContent" data-name="cube_3d">
+    <h2 class="section-title reveal">Test. Iterate. Repeat.</h2>
+    <p class="section-sub reveal">Split testing is a loop — and like this cube, it never stops turning.</p>
+    <div class="cube-stage reveal" id="cubeStage" aria-hidden="true"></div>
+  </section>
+
   <main>
     <!-- WHAT -->
     <section class="section" data-view="ViewContent" data-name="what_is_split_test">
@@ -329,13 +336,6 @@
           <button class="btn btn-primary" id="gStart">▶ Start game</button>
         </div>
       </div>
-    </section>
-
-    <!-- 3D CUBE -->
-    <section class="section" id="cube" data-view="ViewContent" data-name="cube_3d">
-      <h2 class="section-title reveal">Test. Iterate. Repeat.</h2>
-      <p class="section-sub reveal">Split testing is a loop — and like this cube, it never stops turning.</p>
-      <div class="cube-stage reveal" id="cubeStage" aria-hidden="true"></div>
     </section>
 
     <!-- TESTIMONIALS -->
@@ -1310,35 +1310,80 @@
         renderer.setSize(W(), H());
         stage.appendChild(renderer.domElement);
 
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.15;
+        renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+        // procedurally-built environment so the gold has something to reflect
+        const pmrem = new THREE.PMREMGenerator(renderer);
+        const envScene = new THREE.Scene();
+        // warm gradient sky + a couple of bright "studio" patches -> realistic metal reflections
+        const skyGeo = new THREE.SphereGeometry(50, 32, 32);
+        const skyMat = new THREE.ShaderMaterial({
+          side: THREE.BackSide,
+          uniforms: {},
+          vertexShader: "varying vec3 vP; void main(){ vP = position; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }",
+          fragmentShader: [
+            "varying vec3 vP;",
+            "void main(){",
+            "  float h = normalize(vP).y*0.5+0.5;",
+            "  vec3 top = vec3(0.95,0.85,0.6);",   // warm top
+            "  vec3 bot = vec3(0.04,0.04,0.07);",  // dark bottom
+            "  vec3 col = mix(bot, top, pow(h,1.3));",
+            "  // bright key light patch (upper right)",
+            "  vec3 n = normalize(vP);",
+            "  float key = smoothstep(0.86,0.995, dot(n, normalize(vec3(0.6,0.7,0.4))));",
+            "  col += key*vec3(2.4,2.2,1.7);",
+            "  // soft fill patch (left)",
+            "  float fill = smoothstep(0.9,1.0, dot(n, normalize(vec3(-0.7,0.1,0.5))));",
+            "  col += fill*vec3(0.5,0.55,0.8);",
+            "  gl_FragColor = vec4(col,1.0);",
+            "}"
+          ].join("\n")
+        });
+        envScene.add(new THREE.Mesh(skyGeo, skyMat));
+        const envRT = pmrem.fromScene(envScene);
+        scene.environment = envRT.texture;
+
         // pivot keeps the cube standing on a corner; we spin the pivot
         const pivot = new THREE.Group();
         scene.add(pivot);
 
-        // solid cube with a glossy dark material
+        // ---- realistic GOLD material (PBR) ----
         const geo = new THREE.BoxGeometry(2, 2, 2);
-        const mat = new THREE.MeshStandardMaterial({
-          color: 0x14141c, metalness: 0.7, roughness: 0.25,
-          emissive: 0x0a0a18, emissiveIntensity: 0.4
+        // bevel the look a touch via slightly rounded normals isn't available on Box,
+        // so we rely on sharp specular + strong env reflection to read as solid gold.
+        const gold = new THREE.MeshPhysicalMaterial({
+          color: 0xffd25a,            // gold albedo
+          metalness: 1.0,             // pure metal
+          roughness: 0.18,            // polished, but not mirror -> believable
+          reflectivity: 1.0,
+          clearcoat: 0.35,            // faint lacquer sheen
+          clearcoatRoughness: 0.25,
+          envMapIntensity: 1.6
         });
-        const cube = new THREE.Mesh(geo, mat);
+        const cube = new THREE.Mesh(geo, gold);
         // stand on a vertex: rotate so a body diagonal is vertical
         cube.rotation.z = Math.PI / 4;
         cube.rotation.x = Math.atan(1 / Math.SQRT2);
         pivot.add(cube);
 
-        // glowing neon edges
+        // thin warm edge highlight to define the gold corners
         const edges = new THREE.LineSegments(
           new THREE.EdgesGeometry(geo),
-          new THREE.LineBasicMaterial({ color: 0x25f4ee, transparent: true, opacity: 0.9 })
+          new THREE.LineBasicMaterial({ color: 0xfff2c0, transparent: true, opacity: 0.5 })
         );
         edges.rotation.copy(cube.rotation);
         pivot.add(edges);
 
-        // lights — cyan + pink rim for that neon look
-        scene.add(new THREE.AmbientLight(0x404060, 1.2));
-        const l1 = new THREE.PointLight(0x25f4ee, 60, 50); l1.position.set(5, 4, 5); scene.add(l1);
-        const l2 = new THREE.PointLight(0xfe2c55, 50, 50); l2.position.set(-5, -3, 4); scene.add(l2);
-        const l3 = new THREE.PointLight(0x8c3cff, 30, 50); l3.position.set(0, 5, -4); scene.add(l3);
+        // ---- lighting: one strong directional key from upper-right ----
+        scene.add(new THREE.AmbientLight(0x332a18, 0.6));
+        const key = new THREE.DirectionalLight(0xfff6e0, 3.2);   // warm sun-like key
+        key.position.set(5, 6, 4); scene.add(key);
+        const fill = new THREE.DirectionalLight(0x6688ff, 0.6);  // cool fill
+        fill.position.set(-6, -2, 3); scene.add(fill);
+        const rim = new THREE.PointLight(0xffcf66, 40, 60);      // warm rim glow
+        rim.position.set(-3, 4, -5); scene.add(rim);
 
         function resize() {
           camera.aspect = W() / H(); camera.updateProjectionMatrix();
@@ -1349,9 +1394,8 @@
         let t = 0;
         (function loop() {
           requestAnimationFrame(loop);
-          t += 0.01;
-          pivot.rotation.y = t;            // spin around the vertical axis
-          edges.material.opacity = 0.65 + 0.3 * Math.sin(t * 2); // subtle glow pulse
+          t += 0.025;                       // faster spin
+          pivot.rotation.y = t;             // spin around the vertical axis
           renderer.render(scene, camera);
         })();
       })
