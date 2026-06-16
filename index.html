@@ -331,6 +331,13 @@
       </div>
     </section>
 
+    <!-- 3D CUBE -->
+    <section class="section" id="cube" data-view="ViewContent" data-name="cube_3d">
+      <h2 class="section-title reveal">Test. Iterate. Repeat.</h2>
+      <p class="section-sub reveal">Split testing is a loop — and like this cube, it never stops turning.</p>
+      <div class="cube-stage reveal" id="cubeStage" aria-hidden="true"></div>
+    </section>
+
     <!-- TESTIMONIALS -->
     <section class="section section-alt" id="voices">
       <h2 class="section-title reveal">What testers are saying</h2>
@@ -1284,6 +1291,75 @@
         });
       }
     })();
+  </script>
+
+  <!-- 3D cube (Three.js via CDN, ES module) -->
+  <script type="module">
+    const stage = document.getElementById("cubeStage");
+    const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (stage && !reduce) {
+      import("https://unpkg.com/three@0.160.0/build/three.module.js")
+        .then((THREE) => {
+        const W = () => stage.clientWidth, H = () => stage.clientHeight;
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(40, W() / H(), 0.1, 100);
+        camera.position.set(0, 0, 6);
+
+        const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setSize(W(), H());
+        stage.appendChild(renderer.domElement);
+
+        // pivot keeps the cube standing on a corner; we spin the pivot
+        const pivot = new THREE.Group();
+        scene.add(pivot);
+
+        // solid cube with a glossy dark material
+        const geo = new THREE.BoxGeometry(2, 2, 2);
+        const mat = new THREE.MeshStandardMaterial({
+          color: 0x14141c, metalness: 0.7, roughness: 0.25,
+          emissive: 0x0a0a18, emissiveIntensity: 0.4
+        });
+        const cube = new THREE.Mesh(geo, mat);
+        // stand on a vertex: rotate so a body diagonal is vertical
+        cube.rotation.z = Math.PI / 4;
+        cube.rotation.x = Math.atan(1 / Math.SQRT2);
+        pivot.add(cube);
+
+        // glowing neon edges
+        const edges = new THREE.LineSegments(
+          new THREE.EdgesGeometry(geo),
+          new THREE.LineBasicMaterial({ color: 0x25f4ee, transparent: true, opacity: 0.9 })
+        );
+        edges.rotation.copy(cube.rotation);
+        pivot.add(edges);
+
+        // lights — cyan + pink rim for that neon look
+        scene.add(new THREE.AmbientLight(0x404060, 1.2));
+        const l1 = new THREE.PointLight(0x25f4ee, 60, 50); l1.position.set(5, 4, 5); scene.add(l1);
+        const l2 = new THREE.PointLight(0xfe2c55, 50, 50); l2.position.set(-5, -3, 4); scene.add(l2);
+        const l3 = new THREE.PointLight(0x8c3cff, 30, 50); l3.position.set(0, 5, -4); scene.add(l3);
+
+        function resize() {
+          camera.aspect = W() / H(); camera.updateProjectionMatrix();
+          renderer.setSize(W(), H());
+        }
+        window.addEventListener("resize", resize);
+
+        let t = 0;
+        (function loop() {
+          requestAnimationFrame(loop);
+          t += 0.01;
+          pivot.rotation.y = t;            // spin around the vertical axis
+          edges.material.opacity = 0.65 + 0.3 * Math.sin(t * 2); // subtle glow pulse
+          renderer.render(scene, camera);
+        })();
+      })
+        .catch((e) => {
+          // CDN/WebGL failed — fail silently, page works fine without the cube
+          console.warn("3D cube unavailable:", e);
+        });
+    }
   </script>
 </body>
 </html>
