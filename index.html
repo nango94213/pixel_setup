@@ -10,6 +10,16 @@
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
 
+  <!-- import map so Three.js addons can resolve bare "three" imports -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+
   <!-- TikTok Pixel Code Start -->
   <script>
   !function (w, d, t) {
@@ -133,12 +143,10 @@
   </div>
 
   <!-- 3D CUBE (right under the spin wheel / hero) -->
-  <section class="section" id="cube" data-view="ViewContent" data-name="prism">
-    <h2 class="section-title reveal">One input. Full spectrum.</h2>
-    <p class="section-sub reveal">Like white light through a prism, a split test takes one signal and reveals everything inside it.</p>
-    <div class="cube-stage reveal" id="cubeStage" aria-hidden="true">
-      <canvas id="prismCanvas"></canvas>
-    </div>
+  <section class="section" id="cube" data-view="ViewContent" data-name="cube_3d">
+    <h2 class="section-title reveal">Test. Iterate. Repeat.</h2>
+    <p class="section-sub reveal">Split testing is a loop — and like this cube, it never stops turning.</p>
+    <div class="cube-stage reveal" id="cubeStage" aria-hidden="true"></div>
   </section>
 
   <main>
@@ -1295,138 +1303,182 @@
     })();
   </script>
 
-  <!-- Prism spectrum (2D canvas, Pink Floyd style) -->
-  <script>
-    (function () {
-      const stage = document.getElementById("cubeStage");
-      const canvas = document.getElementById("prismCanvas");
-      if (!stage || !canvas) return;
-      const ctx = canvas.getContext("2d");
-      const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      let W, H, DPR = Math.min(window.devicePixelRatio || 1, 2), t = 0;
+  <!-- 3D cube (Three.js via CDN, ES module) -->
+  <script type="module">
+    const stage = document.getElementById("cubeStage");
+    const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (stage && !reduce) {
+      Promise.all([
+        import("three"),
+        import("three/addons/geometries/RoundedBoxGeometry.js")
+      ])
+        .then(([THREE, rbx]) => {
+        const RoundedBoxGeometry = rbx.RoundedBoxGeometry;
+        const W = () => stage.clientWidth, H = () => stage.clientHeight;
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(40, W() / H(), 0.1, 100);
+        camera.position.set(0, 0, 6);
 
-      function resize() {
-        W = stage.clientWidth; H = stage.clientHeight;
-        canvas.width = W * DPR; canvas.height = H * DPR;
-        canvas.style.width = W + "px"; canvas.style.height = H + "px";
-        ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-      }
-      window.addEventListener("resize", resize);
-      resize();
+        const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setSize(W(), H());
+        stage.appendChild(renderer.domElement);
 
-      const SPECTRUM = [
-        "#ff2b2b", "#ff7a00", "#ffd400", "#37e23b",
-        "#1fb6ff", "#3a4bff", "#9b2bff"
-      ];
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.0;
+        renderer.outputColorSpace = THREE.SRGBColorSpace;
 
-      function draw() {
-        t += 0.016;
-        ctx.clearRect(0, 0, W, H);
+        // procedurally-built environment so the gold has something to reflect
+        const pmrem = new THREE.PMREMGenerator(renderer);
+        const envScene = new THREE.Scene();
+        // warm gradient sky + a couple of bright "studio" patches -> realistic metal reflections
+        const skyGeo = new THREE.SphereGeometry(50, 32, 32);
+        const skyMat = new THREE.ShaderMaterial({
+          side: THREE.BackSide,
+          uniforms: {},
+          vertexShader: "varying vec3 vP; void main(){ vP = position; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }",
+          fragmentShader: [
+            "varying vec3 vP;",
+            "void main(){",
+            "  vec3 n = normalize(vP);",
+            "  float h = n.y*0.5+0.5;",
+            // high-contrast studio: bright warm ceiling, dark floor -> strong reflections
+            "  vec3 top = vec3(1.6,1.45,1.1);",
+            "  vec3 bot = vec3(0.01,0.01,0.02);",
+            "  vec3 col = mix(bot, top, pow(h,1.6));",
+            // sharp bright key softbox (upper-right) — the moving highlight on the gold
+            "  float key = smoothstep(0.80,0.995, dot(n, normalize(vec3(0.6,0.75,0.45))));",
+            "  col += key*vec3(6.0,5.4,4.0);",
+            // a second hard rim light (left) for a travelling streak",
+            "  float key2 = smoothstep(0.90,0.999, dot(n, normalize(vec3(-0.8,0.25,0.4))));",
+            "  col += key2*vec3(3.0,3.2,4.0);",
+            // a couple of dark occluders so reflections aren't a flat wash",
+            "  float dark = smoothstep(0.6,0.95, dot(n, normalize(vec3(0.2,-0.7,-0.6))));",
+            "  col *= 1.0 - 0.7*dark;",
+            // faint horizon band (studio seam) reflecting as a crisp line",
+            "  float band = smoothstep(0.06,0.0, abs(n.y)) ;",
+            "  col += band*vec3(0.8,0.75,0.6);",
+            "  gl_FragColor = vec4(col,1.0);",
+            "}"
+          ].join("\n")
+        });
+        envScene.add(new THREE.Mesh(skyGeo, skyMat));
+        const envRT = pmrem.fromScene(envScene);
+        scene.environment = envRT.texture;
 
-        // --- geometry: equilateral-ish triangle prism, sitting on a floor line ---
-        const cx = W * 0.40;                 // prism horizontal centre
-        const baseY = H * 0.78;              // floor line
-        const size = Math.min(W, H) * 0.52;  // prism size
-        const half = size * 0.5;
-        const apexY = baseY - size * 0.92;   // top vertex
-        const ax = cx, ay = apexY;           // apex
-        const lx = cx - half, ly = baseY;    // bottom-left
-        const rx = cx + half, ry = baseY;    // bottom-right
+        // pivot keeps the cube standing on a corner; we spin the pivot
+        const pivot = new THREE.Group();
+        scene.add(pivot);
 
-        // incoming white beam hits the left face roughly mid-height
-        const inY = baseY - size * 0.42;
-        const hitX = cx - half * 0.5;        // point on the left face
-        const hitY = baseY - size * 0.46;
+        // ---- procedural micro-scratch / wear maps (normal + roughness) ----
+        function makeWearMaps() {
+          const S = 512;
+          const c = document.createElement("canvas"); c.width = c.height = S;
+          const ictx = c.getContext("2d");
+          // height field: faint base + many thin random scratches
+          ictx.fillStyle = "#808080"; ictx.fillRect(0, 0, S, S); // neutral height
+          // sprinkle fine scratches
+          for (let i = 0; i < 900; i++) {
+            ictx.globalAlpha = 0.04 + Math.random() * 0.10;
+            ictx.strokeStyle = Math.random() > 0.5 ? "#bdbdbd" : "#5a5a5a";
+            ictx.lineWidth = Math.random() < 0.85 ? 1 : 2;
+            const x = Math.random() * S, y = Math.random() * S;
+            const ang = Math.random() * Math.PI, len = 8 + Math.random() * 70;
+            ictx.beginPath();
+            ictx.moveTo(x, y);
+            ictx.lineTo(x + Math.cos(ang) * len, y + Math.sin(ang) * len);
+            ictx.stroke();
+          }
+          // some speckle dings
+          for (let i = 0; i < 1500; i++) {
+            ictx.globalAlpha = 0.03 + Math.random() * 0.06;
+            ictx.fillStyle = Math.random() > 0.5 ? "#cccccc" : "#4d4d4d";
+            const x = Math.random() * S, y = Math.random() * S, r = Math.random() * 1.6;
+            ictx.beginPath(); ictx.arc(x, y, r, 0, Math.PI * 2); ictx.fill();
+          }
+          ictx.globalAlpha = 1;
+          const height = ictx.getImageData(0, 0, S, S);
 
-        // --- floor reflection gradient ---
-        const floorGrad = ctx.createLinearGradient(0, baseY, 0, H);
-        floorGrad.addColorStop(0, "rgba(255,255,255,0.06)");
-        floorGrad.addColorStop(1, "rgba(255,255,255,0)");
-        ctx.fillStyle = floorGrad;
-        ctx.fillRect(0, baseY, W, H - baseY);
-        // bright floor line
-        ctx.strokeStyle = "rgba(255,255,255,0.5)";
-        ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.moveTo(0, baseY); ctx.lineTo(W, baseY); ctx.stroke();
+          // derive a normal map from the height (Sobel)
+          const nrm = ictx.createImageData(S, S);
+          const H_ = (x, y) => {
+            x = (x + S) % S; y = (y + S) % S;
+            return height.data[(y * S + x) * 4] / 255;
+          };
+          const strength = 2.0;
+          for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+            const dx = (H_(x + 1, y) - H_(x - 1, y)) * strength;
+            const dy = (H_(x, y + 1) - H_(x, y - 1)) * strength;
+            let nx = -dx, ny = -dy, nz = 1;
+            const il = 1 / Math.sqrt(nx * nx + ny * ny + nz * nz);
+            const o = (y * S + x) * 4;
+            nrm.data[o]   = (nx * il * 0.5 + 0.5) * 255;
+            nrm.data[o+1] = (ny * il * 0.5 + 0.5) * 255;
+            nrm.data[o+2] = (nz * il * 0.5 + 0.5) * 255;
+            nrm.data[o+3] = 255;
+          }
+          const nc = document.createElement("canvas"); nc.width = nc.height = S;
+          nc.getContext("2d").putImageData(nrm, 0, 0);
+          const normalTex = new THREE.CanvasTexture(nc);
+          normalTex.wrapS = normalTex.wrapT = THREE.RepeatWrapping;
+          normalTex.repeat.set(2, 2);
 
-        // --- incoming white beam (left -> hit point) ---
-        const flick = 0.85 + 0.15 * Math.sin(t * 6);
-        ctx.save();
-        ctx.lineCap = "round";
-        // glow
-        ctx.strokeStyle = "rgba(255,255,255,0.12)";
-        ctx.lineWidth = 12;
-        ctx.beginPath(); ctx.moveTo(0, inY); ctx.lineTo(hitX, hitY); ctx.stroke();
-        // core
-        ctx.strokeStyle = "rgba(255,255,255," + flick + ")";
-        ctx.lineWidth = 3.2;
-        ctx.beginPath(); ctx.moveTo(0, inY); ctx.lineTo(hitX, hitY); ctx.stroke();
-        ctx.restore();
-
-        // --- internal refracted beam (hit point -> exit on right face) ---
-        const exitX = cx + half * 0.42;
-        const exitY = baseY - size * 0.30;
-        ctx.save();
-        ctx.strokeStyle = "rgba(255,255,255,0.55)";
-        ctx.lineWidth = 2.4;
-        ctx.beginPath(); ctx.moveTo(hitX, hitY); ctx.lineTo(exitX, exitY); ctx.stroke();
-        ctx.restore();
-
-        // --- dispersed rainbow fan exiting to the right ---
-        const fanLen = W - exitX + 40;
-        const spreadTop = -0.06, spreadBot = 0.16; // angular spread (radians) per band
-        ctx.save();
-        ctx.globalCompositeOperation = "lighter";
-        const n = SPECTRUM.length;
-        for (let i = 0; i < n; i++) {
-          const f = i / (n - 1);
-          const ang = spreadTop + (spreadBot - spreadTop) * f;
-          const ex = exitX + Math.cos(ang) * fanLen;
-          const ey = exitY + Math.sin(ang) * fanLen;
-          const grad = ctx.createLinearGradient(exitX, exitY, ex, ey);
-          grad.addColorStop(0, "rgba(255,255,255,0.0)");
-          grad.addColorStop(0.04, SPECTRUM[i]);
-          grad.addColorStop(1, SPECTRUM[i]);
-          ctx.strokeStyle = grad;
-          ctx.globalAlpha = 0.55 * flick;
-          ctx.lineWidth = 7;
-          ctx.beginPath(); ctx.moveTo(exitX, exitY); ctx.lineTo(ex, ey); ctx.stroke();
+          // roughness map: scratches read as slightly shinier/duller streaks
+          const rc = document.createElement("canvas"); rc.width = rc.height = S;
+          const rctx = rc.getContext("2d");
+          rctx.putImageData(height, 0, 0);
+          const roughTex = new THREE.CanvasTexture(rc);
+          roughTex.wrapS = roughTex.wrapT = THREE.RepeatWrapping;
+          roughTex.repeat.set(2, 2);
+          return { normalTex, roughTex };
         }
-        ctx.restore();
+        const { normalTex, roughTex } = makeWearMaps();
 
-        // --- the glass prism itself (drawn over the beams, semi-transparent) ---
-        ctx.save();
-        ctx.beginPath();
-        ctx.moveTo(ax, ay); ctx.lineTo(lx, ly); ctx.lineTo(rx, ry); ctx.closePath();
-        // subtle glass body tint + inner gradient
-        const g = ctx.createLinearGradient(lx, ay, rx, ry);
-        g.addColorStop(0, "rgba(120,140,170,0.18)");
-        g.addColorStop(0.5, "rgba(40,50,70,0.10)");
-        g.addColorStop(1, "rgba(120,140,170,0.20)");
-        ctx.fillStyle = g;
-        ctx.fill();
-        // bright glass edges (the lit triangle outline)
-        ctx.lineJoin = "round";
-        ctx.strokeStyle = "rgba(255,255,255,0.9)";
-        ctx.lineWidth = 2.5;
-        ctx.stroke();
-        // extra glow on the left edge where light enters
-        ctx.strokeStyle = "rgba(200,225,255,0.7)";
-        ctx.lineWidth = 1.2;
-        ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(lx, ly); ctx.stroke();
-        ctx.restore();
+        // ---- realistic GOLD material (PBR) with rounded edges + wear ----
+        const geo = new RoundedBoxGeometry(2, 2, 2, 6, 0.28); // segments, corner radius
+        const gold = new THREE.MeshStandardMaterial({
+          color: 0xf6b733,            // saturated real-gold albedo
+          metalness: 1.0,             // pure metal — reflection driven
+          roughness: 0.12,            // polished -> sharp moving highlights
+          roughnessMap: roughTex,     // worn streaks vary the shine
+          normalMap: normalTex,       // fine scratches catch the light
+          normalScale: new THREE.Vector2(0.4, 0.4),
+          envMapIntensity: 2.6        // crank reflections so it reads as metal
+        });
+        const cube = new THREE.Mesh(geo, gold);
+        // stand on a vertex: rotate so a body diagonal is vertical
+        cube.rotation.z = Math.PI / 4;
+        cube.rotation.x = Math.atan(1 / Math.SQRT2);
+        pivot.add(cube);
 
-        // bright hit spark on the left face
-        const spark = ctx.createRadialGradient(hitX, hitY, 0, hitX, hitY, 14);
-        spark.addColorStop(0, "rgba(255,255,255,0.9)");
-        spark.addColorStop(1, "rgba(255,255,255,0)");
-        ctx.fillStyle = spark;
-        ctx.beginPath(); ctx.arc(hitX, hitY, 14, 0, Math.PI * 2); ctx.fill();
+        // ---- lighting: one strong directional key from upper-right ----
+        scene.add(new THREE.AmbientLight(0x332a18, 0.6));
+        const key = new THREE.DirectionalLight(0xfff6e0, 3.2);   // warm sun-like key
+        key.position.set(5, 6, 4); scene.add(key);
+        const fill = new THREE.DirectionalLight(0x6688ff, 0.6);  // cool fill
+        fill.position.set(-6, -2, 3); scene.add(fill);
+        const rim = new THREE.PointLight(0xffcf66, 40, 60);      // warm rim glow
+        rim.position.set(-3, 4, -5); scene.add(rim);
 
-        if (!reduce) requestAnimationFrame(draw);
-      }
-      draw();
-    })();
+        function resize() {
+          camera.aspect = W() / H(); camera.updateProjectionMatrix();
+          renderer.setSize(W(), H());
+        }
+        window.addEventListener("resize", resize);
+
+        let t = 0;
+        (function loop() {
+          requestAnimationFrame(loop);
+          t += 0.012;                       // slower, more elegant spin
+          pivot.rotation.y = t;             // spin around the vertical axis
+          renderer.render(scene, camera);
+        })();
+      })
+        .catch((e) => {
+          // CDN/WebGL failed — fail silently, page works fine without the cube
+          console.warn("3D cube unavailable:", e);
+        });
+    }
   </script>
 </body>
 </html>
