@@ -10,16 +10,6 @@
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
 
-  <!-- import map so Three.js addons can resolve bare "three" imports -->
-  <script type="importmap">
-  {
-    "imports": {
-      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
-    }
-  }
-  </script>
-
   <!-- TikTok Pixel Code Start -->
   <script>
   !function (w, d, t) {
@@ -143,10 +133,12 @@
   </div>
 
   <!-- 3D CUBE (right under the spin wheel / hero) -->
-  <section class="section" id="cube" data-view="ViewContent" data-name="cube_3d">
-    <h2 class="section-title reveal">See every angle.</h2>
-    <p class="section-sub reveal">Like light through a prism, a split test reveals what's really there — bend the data, see the truth.</p>
-    <div class="cube-stage reveal" id="cubeStage" aria-hidden="true"></div>
+  <section class="section" id="cube" data-view="ViewContent" data-name="prism">
+    <h2 class="section-title reveal">One input. Full spectrum.</h2>
+    <p class="section-sub reveal">Like white light through a prism, a split test takes one signal and reveals everything inside it.</p>
+    <div class="cube-stage reveal" id="cubeStage" aria-hidden="true">
+      <canvas id="prismCanvas"></canvas>
+    </div>
   </section>
 
   <main>
@@ -1303,159 +1295,138 @@
     })();
   </script>
 
-  <!-- 3D glass tetrahedron + laser (Three.js via CDN, ES module) -->
-  <script type="module">
-    const stage = document.getElementById("cubeStage");
-    const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (stage && !reduce) {
-      import("three")
-        .then((THREE) => {
-        const W = () => stage.clientWidth, H = () => stage.clientHeight;
-        const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(40, W() / H(), 0.1, 100);
-        camera.position.set(0, 0.4, 6.5);
-        camera.lookAt(0, 0, 0);
+  <!-- Prism spectrum (2D canvas, Pink Floyd style) -->
+  <script>
+    (function () {
+      const stage = document.getElementById("cubeStage");
+      const canvas = document.getElementById("prismCanvas");
+      if (!stage || !canvas) return;
+      const ctx = canvas.getContext("2d");
+      const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      let W, H, DPR = Math.min(window.devicePixelRatio || 1, 2), t = 0;
 
-        const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        renderer.setSize(W(), H());
-        stage.appendChild(renderer.domElement);
-        renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        renderer.toneMappingExposure = 1.1;
-        renderer.outputColorSpace = THREE.SRGBColorSpace;
+      function resize() {
+        W = stage.clientWidth; H = stage.clientHeight;
+        canvas.width = W * DPR; canvas.height = H * DPR;
+        canvas.style.width = W + "px"; canvas.style.height = H + "px";
+        ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+      }
+      window.addEventListener("resize", resize);
+      resize();
 
-        // ---- environment so glass has something to refract/reflect ----
-        const pmrem = new THREE.PMREMGenerator(renderer);
-        const envScene = new THREE.Scene();
-        const skyGeo = new THREE.SphereGeometry(50, 32, 32);
-        const skyMat = new THREE.ShaderMaterial({
-          side: THREE.BackSide,
-          vertexShader: "varying vec3 vP; void main(){ vP = position; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }",
-          fragmentShader: [
-            "varying vec3 vP;",
-            "void main(){",
-            "  vec3 n = normalize(vP);",
-            "  float h = n.y*0.5+0.5;",
-            "  vec3 col = mix(vec3(0.02,0.03,0.06), vec3(0.30,0.34,0.46), pow(h,1.3));",
-            "  float s1 = smoothstep(0.85,0.999, dot(n, normalize(vec3(0.5,0.7,0.5))));",
-            "  col += s1*vec3(2.0,2.1,2.6);",
-            "  float s2 = smoothstep(0.92,0.999, dot(n, normalize(vec3(-0.7,0.1,0.4))));",
-            "  col += s2*vec3(1.4,1.0,1.8);",
-            "  gl_FragColor = vec4(col,1.0);",
-            "}"
-          ].join("\n")
-        });
-        envScene.add(new THREE.Mesh(skyGeo, skyMat));
-        const envRT = pmrem.fromScene(envScene);
-        scene.environment = envRT.texture;
+      const SPECTRUM = [
+        "#ff2b2b", "#ff7a00", "#ffd400", "#37e23b",
+        "#1fb6ff", "#3a4bff", "#9b2bff"
+      ];
 
-        // ---- glass tetrahedron ----
-        const pivot = new THREE.Group();
-        scene.add(pivot);
-        const geo = new THREE.TetrahedronGeometry(1.7, 0);
-        geo.computeVertexNormals();
-        const glass = new THREE.MeshPhysicalMaterial({
-          color: 0xffffff,
-          metalness: 0.0,
-          roughness: 0.02,
-          transmission: 1.0,      // real glass: light passes through
-          thickness: 1.4,         // refraction depth
-          ior: 1.5,               // glass index of refraction
-          reflectivity: 0.6,
-          clearcoat: 1.0,
-          clearcoatRoughness: 0.05,
-          envMapIntensity: 1.5,
-          transparent: true
-        });
-        const tetra = new THREE.Mesh(geo, glass);
-        // rest a bit tilted so facets catch the laser nicely
-        tetra.rotation.x = 0.35;
-        pivot.add(tetra);
+      function draw() {
+        t += 0.016;
+        ctx.clearRect(0, 0, W, H);
 
-        // subtle bright edges so the glass shape reads clearly
-        const edges = new THREE.LineSegments(
-          new THREE.EdgesGeometry(geo),
-          new THREE.LineBasicMaterial({ color: 0x9fe9ff, transparent: true, opacity: 0.35 })
-        );
-        edges.rotation.copy(tetra.rotation);
-        pivot.add(edges);
+        // --- geometry: equilateral-ish triangle prism, sitting on a floor line ---
+        const cx = W * 0.40;                 // prism horizontal centre
+        const baseY = H * 0.78;              // floor line
+        const size = Math.min(W, H) * 0.52;  // prism size
+        const half = size * 0.5;
+        const apexY = baseY - size * 0.92;   // top vertex
+        const ax = cx, ay = apexY;           // apex
+        const lx = cx - half, ly = baseY;    // bottom-left
+        const rx = cx + half, ry = baseY;    // bottom-right
 
-        // ---- laser beam coming in from the left ----
-        const laser = new THREE.Group();
-        const beamLen = 6;
-        const beamGeo = new THREE.CylinderGeometry(0.018, 0.018, beamLen, 12, 1, true);
-        const beamMat = new THREE.MeshBasicMaterial({ color: 0xff2c55, transparent: true, opacity: 0.9 });
-        const beam = new THREE.Mesh(beamGeo, beamMat);
-        // glow sheath
-        const glowMat = new THREE.MeshBasicMaterial({ color: 0xff2c55, transparent: true, opacity: 0.18, blending: THREE.AdditiveBlending });
-        const glow = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, beamLen, 12, 1, true), glowMat);
-        beam.add(glow);
-        // orient the cylinder horizontally, aim at the tetra centre from the left
-        beam.rotation.z = Math.PI / 2;
-        laser.position.set(-beamLen / 2 - 0.2, 0.1, 0); // left side, tip near the prism
-        laser.add(beam);
-        scene.add(laser);
-        // light the laser actually casts (so reflections/specular track it)
-        const laserLight = new THREE.PointLight(0xff2c55, 25, 12, 2);
-        laserLight.position.set(-2.4, 0.1, 0.2);
-        scene.add(laserLight);
+        // incoming white beam hits the left face roughly mid-height
+        const inY = baseY - size * 0.42;
+        const hitX = cx - half * 0.5;        // point on the left face
+        const hitY = baseY - size * 0.46;
 
-        // hit flare where the beam strikes the prism
-        const flareTex = (() => {
-          const c = document.createElement("canvas"); c.width = c.height = 128;
-          const g = c.getContext("2d");
-          const rad = g.createRadialGradient(64, 64, 0, 64, 64, 64);
-          rad.addColorStop(0, "rgba(255,255,255,1)");
-          rad.addColorStop(0.25, "rgba(255,80,120,0.9)");
-          rad.addColorStop(1, "rgba(255,44,85,0)");
-          g.fillStyle = rad; g.fillRect(0, 0, 128, 128);
-          return new THREE.CanvasTexture(c);
-        })();
-        const flare = new THREE.Sprite(new THREE.SpriteMaterial({
-          map: flareTex, color: 0xffffff, transparent: true,
-          blending: THREE.AdditiveBlending, depthWrite: false
-        }));
-        flare.scale.set(1.3, 1.3, 1);
-        flare.position.set(-0.6, 0.1, 0.2);
-        scene.add(flare);
+        // --- floor reflection gradient ---
+        const floorGrad = ctx.createLinearGradient(0, baseY, 0, H);
+        floorGrad.addColorStop(0, "rgba(255,255,255,0.06)");
+        floorGrad.addColorStop(1, "rgba(255,255,255,0)");
+        ctx.fillStyle = floorGrad;
+        ctx.fillRect(0, baseY, W, H - baseY);
+        // bright floor line
+        ctx.strokeStyle = "rgba(255,255,255,0.5)";
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(0, baseY); ctx.lineTo(W, baseY); ctx.stroke();
 
-        // a refracted/scattered exit streak on the right (the "physics" payoff)
-        const exitMat = new THREE.MeshBasicMaterial({ color: 0xff86a0, transparent: true, opacity: 0.0, blending: THREE.AdditiveBlending });
-        const exit = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.05, 3.2, 12, 1, true), exitMat);
-        exit.rotation.z = Math.PI / 2.4;
-        exit.position.set(1.7, -0.3, 0);
-        scene.add(exit);
+        // --- incoming white beam (left -> hit point) ---
+        const flick = 0.85 + 0.15 * Math.sin(t * 6);
+        ctx.save();
+        ctx.lineCap = "round";
+        // glow
+        ctx.strokeStyle = "rgba(255,255,255,0.12)";
+        ctx.lineWidth = 12;
+        ctx.beginPath(); ctx.moveTo(0, inY); ctx.lineTo(hitX, hitY); ctx.stroke();
+        // core
+        ctx.strokeStyle = "rgba(255,255,255," + flick + ")";
+        ctx.lineWidth = 3.2;
+        ctx.beginPath(); ctx.moveTo(0, inY); ctx.lineTo(hitX, hitY); ctx.stroke();
+        ctx.restore();
 
-        // soft fill lights
-        scene.add(new THREE.AmbientLight(0x223044, 0.8));
-        const fill = new THREE.DirectionalLight(0x9fd0ff, 1.2);
-        fill.position.set(3, 4, 5); scene.add(fill);
+        // --- internal refracted beam (hit point -> exit on right face) ---
+        const exitX = cx + half * 0.42;
+        const exitY = baseY - size * 0.30;
+        ctx.save();
+        ctx.strokeStyle = "rgba(255,255,255,0.55)";
+        ctx.lineWidth = 2.4;
+        ctx.beginPath(); ctx.moveTo(hitX, hitY); ctx.lineTo(exitX, exitY); ctx.stroke();
+        ctx.restore();
 
-        function resize() {
-          camera.aspect = W() / H(); camera.updateProjectionMatrix();
-          renderer.setSize(W(), H());
+        // --- dispersed rainbow fan exiting to the right ---
+        const fanLen = W - exitX + 40;
+        const spreadTop = -0.06, spreadBot = 0.16; // angular spread (radians) per band
+        ctx.save();
+        ctx.globalCompositeOperation = "lighter";
+        const n = SPECTRUM.length;
+        for (let i = 0; i < n; i++) {
+          const f = i / (n - 1);
+          const ang = spreadTop + (spreadBot - spreadTop) * f;
+          const ex = exitX + Math.cos(ang) * fanLen;
+          const ey = exitY + Math.sin(ang) * fanLen;
+          const grad = ctx.createLinearGradient(exitX, exitY, ex, ey);
+          grad.addColorStop(0, "rgba(255,255,255,0.0)");
+          grad.addColorStop(0.04, SPECTRUM[i]);
+          grad.addColorStop(1, SPECTRUM[i]);
+          ctx.strokeStyle = grad;
+          ctx.globalAlpha = 0.55 * flick;
+          ctx.lineWidth = 7;
+          ctx.beginPath(); ctx.moveTo(exitX, exitY); ctx.lineTo(ex, ey); ctx.stroke();
         }
-        window.addEventListener("resize", resize);
+        ctx.restore();
 
-        let t = 0;
-        (function loop() {
-          requestAnimationFrame(loop);
-          t += 0.01;
-          pivot.rotation.y = t;                 // rotate the prism
-          // flicker the laser + hit flare a touch for life
-          const fl = 0.85 + 0.15 * Math.sin(t * 9);
-          beamMat.opacity = 0.9 * fl;
-          flare.material.opacity = (0.7 + 0.3 * Math.sin(t * 7)) ;
-          flare.scale.setScalar(1.2 + 0.25 * Math.sin(t * 6));
-          // exit streak pulses as facets line up with the beam
-          exit.material.opacity = Math.max(0, Math.sin(t * 2)) * 0.5;
-          renderer.render(scene, camera);
-        })();
-      })
-        .catch((e) => {
-          console.warn("3D glass prism unavailable:", e);
-        });
-    }
+        // --- the glass prism itself (drawn over the beams, semi-transparent) ---
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(ax, ay); ctx.lineTo(lx, ly); ctx.lineTo(rx, ry); ctx.closePath();
+        // subtle glass body tint + inner gradient
+        const g = ctx.createLinearGradient(lx, ay, rx, ry);
+        g.addColorStop(0, "rgba(120,140,170,0.18)");
+        g.addColorStop(0.5, "rgba(40,50,70,0.10)");
+        g.addColorStop(1, "rgba(120,140,170,0.20)");
+        ctx.fillStyle = g;
+        ctx.fill();
+        // bright glass edges (the lit triangle outline)
+        ctx.lineJoin = "round";
+        ctx.strokeStyle = "rgba(255,255,255,0.9)";
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+        // extra glow on the left edge where light enters
+        ctx.strokeStyle = "rgba(200,225,255,0.7)";
+        ctx.lineWidth = 1.2;
+        ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(lx, ly); ctx.stroke();
+        ctx.restore();
+
+        // bright hit spark on the left face
+        const spark = ctx.createRadialGradient(hitX, hitY, 0, hitX, hitY, 14);
+        spark.addColorStop(0, "rgba(255,255,255,0.9)");
+        spark.addColorStop(1, "rgba(255,255,255,0)");
+        ctx.fillStyle = spark;
+        ctx.beginPath(); ctx.arc(hitX, hitY, 14, 0, Math.PI * 2); ctx.fill();
+
+        if (!reduce) requestAnimationFrame(draw);
+      }
+      draw();
+    })();
   </script>
 </body>
 </html>
