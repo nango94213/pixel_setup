@@ -10,6 +10,16 @@
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
 
+  <!-- import map so Three.js addons can resolve bare "three" imports -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+
   <!-- TikTok Pixel Code Start -->
   <script>
   !function (w, d, t) {
@@ -1299,8 +1309,8 @@
     const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (stage && !reduce) {
       Promise.all([
-        import("https://unpkg.com/three@0.160.0/build/three.module.js"),
-        import("https://unpkg.com/three@0.160.0/examples/jsm/geometries/RoundedBoxGeometry.js")
+        import("three"),
+        import("three/addons/geometries/RoundedBoxGeometry.js")
       ])
         .then(([THREE, rbx]) => {
         const RoundedBoxGeometry = rbx.RoundedBoxGeometry;
