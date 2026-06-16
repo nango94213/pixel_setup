@@ -1298,8 +1298,12 @@
     const stage = document.getElementById("cubeStage");
     const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (stage && !reduce) {
-      import("https://unpkg.com/three@0.160.0/build/three.module.js")
-        .then((THREE) => {
+      Promise.all([
+        import("https://unpkg.com/three@0.160.0/build/three.module.js"),
+        import("https://unpkg.com/three@0.160.0/examples/jsm/geometries/RoundedBoxGeometry.js")
+      ])
+        .then(([THREE, rbx]) => {
+        const RoundedBoxGeometry = rbx.RoundedBoxGeometry;
         const W = () => stage.clientWidth, H = () => stage.clientHeight;
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(40, W() / H(), 0.1, 100);
@@ -1349,17 +1353,82 @@
         const pivot = new THREE.Group();
         scene.add(pivot);
 
-        // ---- realistic GOLD material (PBR) ----
-        const geo = new THREE.BoxGeometry(2, 2, 2);
-        // bevel the look a touch via slightly rounded normals isn't available on Box,
-        // so we rely on sharp specular + strong env reflection to read as solid gold.
+        // ---- procedural micro-scratch / wear maps (normal + roughness) ----
+        function makeWearMaps() {
+          const S = 512;
+          const c = document.createElement("canvas"); c.width = c.height = S;
+          const ictx = c.getContext("2d");
+          // height field: faint base + many thin random scratches
+          ictx.fillStyle = "#808080"; ictx.fillRect(0, 0, S, S); // neutral height
+          // sprinkle fine scratches
+          for (let i = 0; i < 900; i++) {
+            ictx.globalAlpha = 0.04 + Math.random() * 0.10;
+            ictx.strokeStyle = Math.random() > 0.5 ? "#bdbdbd" : "#5a5a5a";
+            ictx.lineWidth = Math.random() < 0.85 ? 1 : 2;
+            const x = Math.random() * S, y = Math.random() * S;
+            const ang = Math.random() * Math.PI, len = 8 + Math.random() * 70;
+            ictx.beginPath();
+            ictx.moveTo(x, y);
+            ictx.lineTo(x + Math.cos(ang) * len, y + Math.sin(ang) * len);
+            ictx.stroke();
+          }
+          // some speckle dings
+          for (let i = 0; i < 1500; i++) {
+            ictx.globalAlpha = 0.03 + Math.random() * 0.06;
+            ictx.fillStyle = Math.random() > 0.5 ? "#cccccc" : "#4d4d4d";
+            const x = Math.random() * S, y = Math.random() * S, r = Math.random() * 1.6;
+            ictx.beginPath(); ictx.arc(x, y, r, 0, Math.PI * 2); ictx.fill();
+          }
+          ictx.globalAlpha = 1;
+          const height = ictx.getImageData(0, 0, S, S);
+
+          // derive a normal map from the height (Sobel)
+          const nrm = ictx.createImageData(S, S);
+          const H_ = (x, y) => {
+            x = (x + S) % S; y = (y + S) % S;
+            return height.data[(y * S + x) * 4] / 255;
+          };
+          const strength = 2.0;
+          for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+            const dx = (H_(x + 1, y) - H_(x - 1, y)) * strength;
+            const dy = (H_(x, y + 1) - H_(x, y - 1)) * strength;
+            let nx = -dx, ny = -dy, nz = 1;
+            const il = 1 / Math.sqrt(nx * nx + ny * ny + nz * nz);
+            const o = (y * S + x) * 4;
+            nrm.data[o]   = (nx * il * 0.5 + 0.5) * 255;
+            nrm.data[o+1] = (ny * il * 0.5 + 0.5) * 255;
+            nrm.data[o+2] = (nz * il * 0.5 + 0.5) * 255;
+            nrm.data[o+3] = 255;
+          }
+          const nc = document.createElement("canvas"); nc.width = nc.height = S;
+          nc.getContext("2d").putImageData(nrm, 0, 0);
+          const normalTex = new THREE.CanvasTexture(nc);
+          normalTex.wrapS = normalTex.wrapT = THREE.RepeatWrapping;
+          normalTex.repeat.set(2, 2);
+
+          // roughness map: scratches read as slightly shinier/duller streaks
+          const rc = document.createElement("canvas"); rc.width = rc.height = S;
+          const rctx = rc.getContext("2d");
+          rctx.putImageData(height, 0, 0);
+          const roughTex = new THREE.CanvasTexture(rc);
+          roughTex.wrapS = roughTex.wrapT = THREE.RepeatWrapping;
+          roughTex.repeat.set(2, 2);
+          return { normalTex, roughTex };
+        }
+        const { normalTex, roughTex } = makeWearMaps();
+
+        // ---- realistic GOLD material (PBR) with rounded edges + wear ----
+        const geo = new RoundedBoxGeometry(2, 2, 2, 6, 0.28); // segments, corner radius
         const gold = new THREE.MeshPhysicalMaterial({
           color: 0xffd25a,            // gold albedo
           metalness: 1.0,             // pure metal
-          roughness: 0.18,            // polished, but not mirror -> believable
+          roughness: 0.22,
+          roughnessMap: roughTex,     // worn streaks vary the shine
+          normalMap: normalTex,       // fine scratches catch the light
+          normalScale: new THREE.Vector2(0.35, 0.35),
           reflectivity: 1.0,
-          clearcoat: 0.35,            // faint lacquer sheen
-          clearcoatRoughness: 0.25,
+          clearcoat: 0.3,
+          clearcoatRoughness: 0.3,
           envMapIntensity: 1.6
         });
         const cube = new THREE.Mesh(geo, gold);
@@ -1367,14 +1436,6 @@
         cube.rotation.z = Math.PI / 4;
         cube.rotation.x = Math.atan(1 / Math.SQRT2);
         pivot.add(cube);
-
-        // thin warm edge highlight to define the gold corners
-        const edges = new THREE.LineSegments(
-          new THREE.EdgesGeometry(geo),
-          new THREE.LineBasicMaterial({ color: 0xfff2c0, transparent: true, opacity: 0.5 })
-        );
-        edges.rotation.copy(cube.rotation);
-        pivot.add(edges);
 
         // ---- lighting: one strong directional key from upper-right ----
         scene.add(new THREE.AmbientLight(0x332a18, 0.6));
@@ -1394,7 +1455,7 @@
         let t = 0;
         (function loop() {
           requestAnimationFrame(loop);
-          t += 0.025;                       // faster spin
+          t += 0.012;                       // slower, more elegant spin
           pivot.rotation.y = t;             // spin around the vertical axis
           renderer.render(scene, camera);
         })();
