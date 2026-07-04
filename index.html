@@ -11,11 +11,12 @@
   <link rel="stylesheet" href="style.css" />
 
   <!-- import map so Three.js addons can resolve bare "three" imports -->
+  <!-- r178: MeshPhysicalMaterial.dispersion (real rainbow fire) needs r165+ -->
   <script type="importmap">
   {
     "imports": {
-      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+      "three": "https://unpkg.com/three@0.178.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.178.0/examples/jsm/"
     }
   }
   </script>
@@ -142,10 +143,10 @@
     </div>
   </div>
 
-  <!-- 3D CUBE (right under the spin wheel / hero) -->
+  <!-- 3D DIAMOND (right under the spin wheel / hero) -->
   <section class="section" id="cube" data-view="ViewContent" data-name="cube_3d">
-    <h2 class="section-title reveal">Test. Iterate. Repeat.</h2>
-    <p class="section-sub reveal">Split testing is a loop — and like this cube, it never stops turning.</p>
+    <h2 class="section-title reveal">Test. Iterate. <span class="gradient-text">Shine.</span></h2>
+    <p class="section-sub reveal">Every split test cuts a new facet. Keep polishing until the winner sparkles — like this.</p>
     <div class="cube-stage reveal" id="cubeStage" aria-hidden="true"></div>
   </section>
 
@@ -1303,21 +1304,18 @@
     })();
   </script>
 
-  <!-- 3D cube (Three.js via CDN, ES module) -->
+  <!-- 3D rotating crystal diamond with rainbow fire (Three.js via CDN, ES module) -->
   <script type="module">
     const stage = document.getElementById("cubeStage");
     const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (stage && !reduce) {
-      Promise.all([
-        import("three"),
-        import("three/addons/geometries/RoundedBoxGeometry.js")
-      ])
-        .then(([THREE, rbx]) => {
-        const RoundedBoxGeometry = rbx.RoundedBoxGeometry;
+      import("three")
+        .then((THREE) => {
         const W = () => stage.clientWidth, H = () => stage.clientHeight;
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(40, W() / H(), 0.1, 100);
-        camera.position.set(0, 0, 6);
+        camera.position.set(0, 0.35, 6.4);
+        camera.lookAt(0, 0, 0);
 
         const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -1325,140 +1323,170 @@
         stage.appendChild(renderer.domElement);
 
         renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        renderer.toneMappingExposure = 1.0;
+        renderer.toneMappingExposure = 1.15;
         renderer.outputColorSpace = THREE.SRGBColorSpace;
 
-        // procedurally-built environment so the gold has something to reflect
+        // ---- rainbow studio environment: hue wheel + hard white key lights ----
+        // the spinning facets sweep across this and flash rainbow highlights
         const pmrem = new THREE.PMREMGenerator(renderer);
         const envScene = new THREE.Scene();
-        // warm gradient sky + a couple of bright "studio" patches -> realistic metal reflections
-        const skyGeo = new THREE.SphereGeometry(50, 32, 32);
         const skyMat = new THREE.ShaderMaterial({
           side: THREE.BackSide,
-          uniforms: {},
           vertexShader: "varying vec3 vP; void main(){ vP = position; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }",
           fragmentShader: [
             "varying vec3 vP;",
+            "vec3 hsv2rgb(vec3 c){ vec4 K=vec4(1.,2./3.,1./3.,3.); vec3 p=abs(fract(c.xxx+K.xyz)*6.-K.www); return c.z*mix(K.xxx, clamp(p-K.xxx,0.,1.), c.y); }",
             "void main(){",
             "  vec3 n = normalize(vP);",
+            "  float hue = atan(n.z, n.x) / 6.2831853 + 0.5;",
             "  float h = n.y*0.5+0.5;",
-            // high-contrast studio: bright warm ceiling, dark floor -> strong reflections
-            "  vec3 top = vec3(1.6,1.45,1.1);",
-            "  vec3 bot = vec3(0.01,0.01,0.02);",
-            "  vec3 col = mix(bot, top, pow(h,1.6));",
-            // sharp bright key softbox (upper-right) — the moving highlight on the gold
-            "  float key = smoothstep(0.80,0.995, dot(n, normalize(vec3(0.6,0.75,0.45))));",
-            "  col += key*vec3(6.0,5.4,4.0);",
-            // a second hard rim light (left) for a travelling streak",
-            "  float key2 = smoothstep(0.90,0.999, dot(n, normalize(vec3(-0.8,0.25,0.4))));",
-            "  col += key2*vec3(3.0,3.2,4.0);",
-            // a couple of dark occluders so reflections aren't a flat wash",
-            "  float dark = smoothstep(0.6,0.95, dot(n, normalize(vec3(0.2,-0.7,-0.6))));",
-            "  col *= 1.0 - 0.7*dark;",
-            // faint horizon band (studio seam) reflecting as a crisp line",
-            "  float band = smoothstep(0.06,0.0, abs(n.y)) ;",
-            "  col += band*vec3(0.8,0.75,0.6);",
-            "  gl_FragColor = vec4(col,1.0);",
+            "  vec3 rainbow = hsv2rgb(vec3(hue, 0.95, 1.3));",
+            "  vec3 col = rainbow * (0.22 + 0.95*pow(h, 1.25));",
+            "  float key = smoothstep(0.86, 0.995, dot(n, normalize(vec3(0.5,0.8,0.35))));",
+            "  col += key * vec3(9.0);",
+            "  float key2 = smoothstep(0.93, 0.999, dot(n, normalize(vec3(-0.7,0.4,0.5))));",
+            "  col += key2 * vec3(5.0);",
+            "  float dark = smoothstep(0.5, 0.95, dot(n, vec3(0.0,-1.0,0.0)));",
+            "  col *= 1.0 - 0.75*dark;",
+            "  gl_FragColor = vec4(col, 1.0);",
             "}"
           ].join("\n")
         });
-        envScene.add(new THREE.Mesh(skyGeo, skyMat));
-        const envRT = pmrem.fromScene(envScene);
-        scene.environment = envRT.texture;
+        envScene.add(new THREE.Mesh(new THREE.SphereGeometry(50, 32, 32), skyMat));
+        scene.environment = pmrem.fromScene(envScene).texture;
 
-        // pivot keeps the cube standing on a corner; we spin the pivot
-        const pivot = new THREE.Group();
-        scene.add(pivot);
+        // dark backdrop inside the scene so refraction/dispersion has content
+        const backdrop = new THREE.Mesh(
+          new THREE.SphereGeometry(30, 24, 24),
+          new THREE.ShaderMaterial({
+            side: THREE.BackSide,
+            vertexShader: "varying vec3 vP; void main(){ vP = position; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }",
+            fragmentShader: [
+              "varying vec3 vP;",
+              "void main(){",
+              "  float h = normalize(vP).y*0.5+0.5;",
+              "  gl_FragColor = vec4(mix(vec3(0.016,0.016,0.035), vec3(0.075,0.06,0.14), pow(h,1.4)), 1.0);",
+              "}"
+            ].join("\n")
+          })
+        );
+        scene.add(backdrop);
 
-        // ---- procedural micro-scratch / wear maps (normal + roughness) ----
-        function makeWearMaps() {
-          const S = 512;
-          const c = document.createElement("canvas"); c.width = c.height = S;
-          const ictx = c.getContext("2d");
-          // height field: faint base + many thin random scratches
-          ictx.fillStyle = "#808080"; ictx.fillRect(0, 0, S, S); // neutral height
-          // sprinkle fine scratches
-          for (let i = 0; i < 900; i++) {
-            ictx.globalAlpha = 0.04 + Math.random() * 0.10;
-            ictx.strokeStyle = Math.random() > 0.5 ? "#bdbdbd" : "#5a5a5a";
-            ictx.lineWidth = Math.random() < 0.85 ? 1 : 2;
-            const x = Math.random() * S, y = Math.random() * S;
-            const ang = Math.random() * Math.PI, len = 8 + Math.random() * 70;
-            ictx.beginPath();
-            ictx.moveTo(x, y);
-            ictx.lineTo(x + Math.cos(ang) * len, y + Math.sin(ang) * len);
-            ictx.stroke();
-          }
-          // some speckle dings
-          for (let i = 0; i < 1500; i++) {
-            ictx.globalAlpha = 0.03 + Math.random() * 0.06;
-            ictx.fillStyle = Math.random() > 0.5 ? "#cccccc" : "#4d4d4d";
-            const x = Math.random() * S, y = Math.random() * S, r = Math.random() * 1.6;
-            ictx.beginPath(); ictx.arc(x, y, r, 0, Math.PI * 2); ictx.fill();
-          }
-          ictx.globalAlpha = 1;
-          const height = ictx.getImageData(0, 0, S, S);
-
-          // derive a normal map from the height (Sobel)
-          const nrm = ictx.createImageData(S, S);
-          const H_ = (x, y) => {
-            x = (x + S) % S; y = (y + S) % S;
-            return height.data[(y * S + x) * 4] / 255;
-          };
-          const strength = 2.0;
-          for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
-            const dx = (H_(x + 1, y) - H_(x - 1, y)) * strength;
-            const dy = (H_(x, y + 1) - H_(x, y - 1)) * strength;
-            let nx = -dx, ny = -dy, nz = 1;
-            const il = 1 / Math.sqrt(nx * nx + ny * ny + nz * nz);
-            const o = (y * S + x) * 4;
-            nrm.data[o]   = (nx * il * 0.5 + 0.5) * 255;
-            nrm.data[o+1] = (ny * il * 0.5 + 0.5) * 255;
-            nrm.data[o+2] = (nz * il * 0.5 + 0.5) * 255;
-            nrm.data[o+3] = 255;
-          }
-          const nc = document.createElement("canvas"); nc.width = nc.height = S;
-          nc.getContext("2d").putImageData(nrm, 0, 0);
-          const normalTex = new THREE.CanvasTexture(nc);
-          normalTex.wrapS = normalTex.wrapT = THREE.RepeatWrapping;
-          normalTex.repeat.set(2, 2);
-
-          // roughness map: scratches read as slightly shinier/duller streaks
-          const rc = document.createElement("canvas"); rc.width = rc.height = S;
-          const rctx = rc.getContext("2d");
-          rctx.putImageData(height, 0, 0);
-          const roughTex = new THREE.CanvasTexture(rc);
-          roughTex.wrapS = roughTex.wrapT = THREE.RepeatWrapping;
-          roughTex.repeat.set(2, 2);
-          return { normalTex, roughTex };
+        // ---- rainbow light beams sweeping behind the stone ----
+        // they sit in the transmission buffer, so the crystal genuinely
+        // refracts them (with chromatic dispersion) as it turns
+        function rainbowTex() {
+          const c = document.createElement("canvas"); c.width = 256; c.height = 64;
+          const g = c.getContext("2d");
+          const gr = g.createLinearGradient(0, 0, 256, 0);
+          ["#ff004c", "#ff9a3c", "#ffd24a", "#3dff7c", "#25f4ee", "#4c6bff", "#b04cff"]
+            .forEach((col, i, a) => gr.addColorStop(i / (a.length - 1), col));
+          g.fillStyle = gr; g.fillRect(0, 0, 256, 64);
+          g.globalCompositeOperation = "destination-out";
+          const fy = g.createLinearGradient(0, 0, 0, 64);
+          fy.addColorStop(0, "rgba(0,0,0,1)"); fy.addColorStop(0.5, "rgba(0,0,0,0)"); fy.addColorStop(1, "rgba(0,0,0,1)");
+          g.fillStyle = fy; g.fillRect(0, 0, 256, 64);
+          const fx = g.createLinearGradient(0, 0, 256, 0);
+          fx.addColorStop(0, "rgba(0,0,0,1)"); fx.addColorStop(0.12, "rgba(0,0,0,0)");
+          fx.addColorStop(0.88, "rgba(0,0,0,0)"); fx.addColorStop(1, "rgba(0,0,0,1)");
+          g.fillStyle = fx; g.fillRect(0, 0, 256, 64);
+          const t = new THREE.CanvasTexture(c);
+          t.colorSpace = THREE.SRGBColorSpace;
+          return t;
         }
-        const { normalTex, roughTex } = makeWearMaps();
+        const beamGroup = new THREE.Group();
+        const beamTex = rainbowTex();
+        for (let i = 0; i < 3; i++) {
+          const beam = new THREE.Mesh(
+            new THREE.PlaneGeometry(9.5, 0.9),
+            new THREE.MeshBasicMaterial({
+              map: beamTex, transparent: true, opacity: 0.8,
+              blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide
+            })
+          );
+          beam.position.z = -2.3;
+          beam.rotation.z = i * (Math.PI / 3);
+          beamGroup.add(beam);
+        }
+        scene.add(beamGroup);
 
-        // ---- realistic GOLD material (PBR) with rounded edges + wear ----
-        const geo = new RoundedBoxGeometry(2, 2, 2, 6, 0.28); // segments, corner radius
-        const gold = new THREE.MeshStandardMaterial({
-          color: 0xf6b733,            // saturated real-gold albedo
-          metalness: 1.0,             // pure metal — reflection driven
-          roughness: 0.12,            // polished -> sharp moving highlights
-          roughnessMap: roughTex,     // worn streaks vary the shine
-          normalMap: normalTex,       // fine scratches catch the light
-          normalScale: new THREE.Vector2(0.4, 0.4),
-          envMapIntensity: 2.6        // crank reflections so it reads as metal
+        // ---- the crystal: 8-sided cut gem (crown + pavilion), flat facets ----
+        const gemMat = new THREE.MeshPhysicalMaterial({
+          color: 0xffffff,
+          metalness: 0,
+          roughness: 0.015,
+          transmission: 1,           // fully see-through crystal
+          thickness: 2.4,            // refraction depth
+          ior: 2.42,                 // diamond's index of refraction
+          dispersion: 0.55,          // exaggerated rainbow fire (r165+)
+          clearcoat: 1,
+          clearcoatRoughness: 0,
+          envMapIntensity: 3.0,
+          specularIntensity: 1,
+          flatShading: true
         });
-        const cube = new THREE.Mesh(geo, gold);
-        // stand on a vertex: rotate so a body diagonal is vertical
-        cube.rotation.z = Math.PI / 4;
-        cube.rotation.x = Math.atan(1 / Math.SQRT2);
-        pivot.add(cube);
+        const rig = new THREE.Group();   // pointer tilt lives here
+        const gem = new THREE.Group();   // spin lives here
+        const R = 1.35;
+        const crown = new THREE.Mesh(new THREE.CylinderGeometry(0.62, R, 0.72, 8, 1), gemMat);
+        crown.position.y = 0.36;
+        const pavilion = new THREE.Mesh(new THREE.ConeGeometry(R, 1.85, 8, 1), gemMat);
+        pavilion.rotation.x = Math.PI;
+        pavilion.position.y = -0.925;
+        gem.add(crown, pavilion);
+        gem.position.y = 0.15;
+        rig.add(gem);
+        scene.add(rig);
 
-        // ---- lighting: one strong directional key from upper-right ----
-        scene.add(new THREE.AmbientLight(0x332a18, 0.6));
-        const key = new THREE.DirectionalLight(0xfff6e0, 3.2);   // warm sun-like key
-        key.position.set(5, 6, 4); scene.add(key);
-        const fill = new THREE.DirectionalLight(0x6688ff, 0.6);  // cool fill
-        fill.position.set(-6, -2, 3); scene.add(fill);
-        const rim = new THREE.PointLight(0xffcf66, 40, 60);      // warm rim glow
-        rim.position.set(-3, 4, -5); scene.add(rim);
+        // ---- twinkling star glints around the stone ----
+        function starTex() {
+          const S = 128, c = document.createElement("canvas"); c.width = c.height = S;
+          const g = c.getContext("2d");
+          const glow = g.createRadialGradient(S/2, S/2, 0, S/2, S/2, S/2);
+          glow.addColorStop(0, "rgba(255,255,255,1)");
+          glow.addColorStop(0.18, "rgba(255,255,255,0.65)");
+          glow.addColorStop(1, "rgba(255,255,255,0)");
+          g.fillStyle = glow; g.fillRect(0, 0, S, S);
+          g.globalCompositeOperation = "lighter";
+          [[S/2 - 2, 0, 4, S], [0, S/2 - 2, S, 4]].forEach(([x, y, w, h]) => {
+            const lg = g.createLinearGradient(x, y, x + (w < h ? 0 : w), y + (w < h ? h : 0));
+            lg.addColorStop(0, "rgba(255,255,255,0)");
+            lg.addColorStop(0.5, "rgba(255,255,255,0.9)");
+            lg.addColorStop(1, "rgba(255,255,255,0)");
+            g.fillStyle = lg; g.fillRect(x, y, w, h);
+          });
+          const t = new THREE.CanvasTexture(c);
+          t.colorSpace = THREE.SRGBColorSpace;
+          return t;
+        }
+        const glintTex = starTex();
+        const glints = [];
+        for (let i = 0; i < 9; i++) {
+          const s = new THREE.Sprite(new THREE.SpriteMaterial({
+            map: glintTex, transparent: true, opacity: 0,
+            blending: THREE.AdditiveBlending, depthWrite: false
+          }));
+          const a = Math.random() * Math.PI * 2, e = (Math.random() - 0.35) * 1.6;
+          const r = 1.55 + Math.random() * 0.55;
+          s.position.set(Math.cos(a) * r, Math.sin(e) * r * 0.8 + 0.15, Math.sin(a) * r * 0.6);
+          s.userData = { phase: Math.random() * Math.PI * 2, speed: 0.9 + Math.random() * 1.6 };
+          glints.push(s);
+          scene.add(s);
+        }
+
+        // soft white key for extra facet definition
+        const keyLight = new THREE.DirectionalLight(0xffffff, 1.1);
+        keyLight.position.set(4, 6, 5);
+        scene.add(keyLight);
+
+        // pointer tilt: the stone leans toward your cursor/finger
+        let tTiltX = 0, tTiltY = 0, tiltX = 0, tiltY = 0;
+        stage.addEventListener("pointermove", (e) => {
+          const r = stage.getBoundingClientRect();
+          tTiltY = ((e.clientX - r.left) / r.width - 0.5) * 0.55;
+          tTiltX = ((e.clientY - r.top) / r.height - 0.5) * 0.35;
+        });
+        stage.addEventListener("pointerleave", () => { tTiltX = 0; tTiltY = 0; });
 
         function resize() {
           camera.aspect = W() / H(); camera.updateProjectionMatrix();
@@ -1469,16 +1497,29 @@
         let t = 0;
         (function loop() {
           requestAnimationFrame(loop);
-          t += 0.012;                       // slower, more elegant spin
-          pivot.rotation.y = t;             // spin around the vertical axis
+          t += 0.01;
+          gem.rotation.y += 0.009;                      // slow elegant spin
+          gem.position.y = 0.15 + Math.sin(t * 0.8) * 0.09;  // gentle levitation bob
+          beamGroup.rotation.z -= 0.0035;               // rainbow rays sweep behind
+          tiltX += (tTiltX - tiltX) * 0.06;             // silky lerp toward pointer
+          tiltY += (tTiltY - tiltY) * 0.06;
+          rig.rotation.x = tiltX; rig.rotation.z = -tiltY * 0.5; rig.rotation.y = tiltY;
+          for (const s of glints) {
+            const tw = Math.sin(t * s.userData.speed + s.userData.phase);
+            const v = Math.max(0, tw);
+            s.material.opacity = v * v * v * 0.9;
+            const sc = 0.28 + v * 0.5;
+            s.scale.set(sc, sc, 1);
+          }
           renderer.render(scene, camera);
         })();
       })
         .catch((e) => {
-          // CDN/WebGL failed — fail silently, page works fine without the cube
-          console.warn("3D cube unavailable:", e);
+          // CDN/WebGL failed — fail silently, page works fine without the gem
+          console.warn("3D diamond unavailable:", e);
         });
     }
   </script>
 </body>
+
 </html>

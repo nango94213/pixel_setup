@@ -1120,7 +1120,7 @@ html { scroll-padding-top: 90px; }
   .glass-nav { transition: none; }
 }
 
-/* ---------- 3D Three.js cube ---------- */
+/* ---------- 3D Three.js crystal diamond ---------- */
 .cube-stage {
   width: 100%;
   height: 460px;
@@ -1128,5 +1128,15 @@ html { scroll-padding-top: 90px; }
   margin: 2rem auto 0;
   position: relative;
 }
-.cube-stage canvas { display: block; width: 100% !important; height: 100% !important; }
+.cube-stage canvas { display: block; position: relative; z-index: 1; width: 100% !important; height: 100% !important; }
 @media (max-width: 640px) { .cube-stage { height: 360px; } }
+/* slow-spinning rainbow halo glowing behind the stone */
+.cube-stage::before {
+  content: ""; position: absolute; inset: 6%; z-index: 0;
+  border-radius: 50%; pointer-events: none;
+  background: conic-gradient(from 0deg,
+    #ff004c, #ff9a3c, #ffd24a, #3dff7c, #25f4ee, #4c6bff, #b04cff, #ff004c);
+  filter: blur(70px); opacity: 0.32;
+  animation: gemHalo 16s linear infinite;
+}
+@keyframes gemHalo { to { transform: rotate(360deg); } }
