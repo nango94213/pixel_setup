@@ -1304,77 +1304,91 @@
     })();
   </script>
 
-  <!-- 3D rotating crystal diamond with rainbow fire (Three.js via CDN, ES module) -->
+  <!-- 3D transparent crystal diamond (Three.js + built-in RoomEnvironment/ConvexGeometry) -->
   <script type="module">
     const stage = document.getElementById("cubeStage");
     const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (stage && !reduce) {
-      import("three")
-        .then((THREE) => {
+      Promise.all([
+        import("three"),
+        import("three/addons/geometries/ConvexGeometry.js"),
+        import("three/addons/environments/RoomEnvironment.js")
+      ])
+        .then(([THREE, cg, re]) => {
+        const ConvexGeometry = cg.ConvexGeometry;
+        const RoomEnvironment = re.RoomEnvironment;
         const W = () => stage.clientWidth, H = () => stage.clientHeight;
+
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(40, W() / H(), 0.1, 100);
-        camera.position.set(0, 0.35, 6.4);
+        camera.position.set(0, 0.4, 6.2);
         camera.lookAt(0, 0, 0);
 
         const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+        renderer.setClearColor(0x000000, 0);       // fully transparent canvas — page shows through
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         renderer.setSize(W(), H());
         stage.appendChild(renderer.domElement);
-
         renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        renderer.toneMappingExposure = 1.15;
+        renderer.toneMappingExposure = 1.2;
         renderer.outputColorSpace = THREE.SRGBColorSpace;
 
-        // ---- rainbow studio environment: hue wheel + hard white key lights ----
-        // the spinning facets sweep across this and flash rainbow highlights
+        // three's built-in studio lighting rig — same env model-viewer uses
         const pmrem = new THREE.PMREMGenerator(renderer);
-        const envScene = new THREE.Scene();
-        const skyMat = new THREE.ShaderMaterial({
-          side: THREE.BackSide,
-          vertexShader: "varying vec3 vP; void main(){ vP = position; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }",
-          fragmentShader: [
-            "varying vec3 vP;",
-            "vec3 hsv2rgb(vec3 c){ vec4 K=vec4(1.,2./3.,1./3.,3.); vec3 p=abs(fract(c.xxx+K.xyz)*6.-K.www); return c.z*mix(K.xxx, clamp(p-K.xxx,0.,1.), c.y); }",
-            "void main(){",
-            "  vec3 n = normalize(vP);",
-            "  float hue = atan(n.z, n.x) / 6.2831853 + 0.5;",
-            "  float h = n.y*0.5+0.5;",
-            "  vec3 rainbow = hsv2rgb(vec3(hue, 0.95, 1.3));",
-            "  vec3 col = rainbow * (0.22 + 0.95*pow(h, 1.25));",
-            "  float key = smoothstep(0.86, 0.995, dot(n, normalize(vec3(0.5,0.8,0.35))));",
-            "  col += key * vec3(9.0);",
-            "  float key2 = smoothstep(0.93, 0.999, dot(n, normalize(vec3(-0.7,0.4,0.5))));",
-            "  col += key2 * vec3(5.0);",
-            "  float dark = smoothstep(0.5, 0.95, dot(n, vec3(0.0,-1.0,0.0)));",
-            "  col *= 1.0 - 0.75*dark;",
-            "  gl_FragColor = vec4(col, 1.0);",
-            "}"
-          ].join("\n")
+        scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+
+        // ---- brilliant-cut stone: one clean convex hull, no seams ----
+        const pts = [];
+        const G = 16;                                    // girdle points
+        for (let i = 0; i < G; i++) {
+          const a = (i / G) * Math.PI * 2;
+          pts.push(new THREE.Vector3(Math.cos(a) * 1.15, 0.02, Math.sin(a) * 1.15));
+          const b = ((i + 0.5) / G) * Math.PI * 2;
+          pts.push(new THREE.Vector3(Math.cos(b) * 1.15, -0.10, Math.sin(b) * 1.15));
+        }
+        for (let i = 0; i < 8; i++) {                    // crown ring
+          const a = ((i + 0.5) / 8) * Math.PI * 2;
+          pts.push(new THREE.Vector3(Math.cos(a) * 0.72, 0.44, Math.sin(a) * 0.72));
+        }
+        for (let i = 0; i < 8; i++) {                    // flat table
+          const a = (i / 8) * Math.PI * 2;
+          pts.push(new THREE.Vector3(Math.cos(a) * 0.42, 0.60, Math.sin(a) * 0.42));
+        }
+        pts.push(new THREE.Vector3(0, -1.28, 0));        // culet (pavilion tip)
+        const geo = new ConvexGeometry(pts);
+
+        // ---- transparent crystal: back pass + front pass + edge sparkle ----
+        // iridescence = physical thin-film rainbow sheen on the facets
+        const frontMat = new THREE.MeshPhysicalMaterial({
+          color: 0xffffff, metalness: 0, roughness: 0.015,
+          transparent: true, opacity: 0.22, depthWrite: false,
+          envMapIntensity: 2.4,
+          clearcoat: 1, clearcoatRoughness: 0,
+          iridescence: 0.9, iridescenceIOR: 1.6, iridescenceThicknessRange: [120, 480],
+          side: THREE.FrontSide
         });
-        envScene.add(new THREE.Mesh(new THREE.SphereGeometry(50, 32, 32), skyMat));
-        scene.environment = pmrem.fromScene(envScene).texture;
-
-        // dark backdrop inside the scene so refraction/dispersion has content
-        const backdrop = new THREE.Mesh(
-          new THREE.SphereGeometry(30, 24, 24),
-          new THREE.ShaderMaterial({
-            side: THREE.BackSide,
-            vertexShader: "varying vec3 vP; void main(){ vP = position; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }",
-            fragmentShader: [
-              "varying vec3 vP;",
-              "void main(){",
-              "  float h = normalize(vP).y*0.5+0.5;",
-              "  gl_FragColor = vec4(mix(vec3(0.016,0.016,0.035), vec3(0.075,0.06,0.14), pow(h,1.4)), 1.0);",
-              "}"
-            ].join("\n")
-          })
+        const backMat = new THREE.MeshPhysicalMaterial({
+          color: 0xdff1ff, metalness: 0, roughness: 0.03,
+          transparent: true, opacity: 0.30, depthWrite: false,
+          envMapIntensity: 1.5,
+          iridescence: 0.5, iridescenceIOR: 1.4,
+          side: THREE.BackSide
+        });
+        const rig = new THREE.Group();   // pointer tilt lives here
+        const gem = new THREE.Group();   // spin lives here
+        const backMesh = new THREE.Mesh(geo, backMat);  backMesh.renderOrder = 1;
+        const frontMesh = new THREE.Mesh(geo, frontMat); frontMesh.renderOrder = 2;
+        const edges = new THREE.LineSegments(
+          new THREE.EdgesGeometry(geo, 5),
+          new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.25 })
         );
-        scene.add(backdrop);
+        edges.renderOrder = 3;
+        gem.add(backMesh, frontMesh, edges);
+        gem.position.y = 0.15;
+        rig.add(gem);
+        scene.add(rig);
 
-        // ---- rainbow light beams sweeping behind the stone ----
-        // they sit in the transmission buffer, so the crystal genuinely
-        // refracts them (with chromatic dispersion) as it turns
+        // ---- rainbow beams sweeping behind — visible THROUGH the stone ----
         function rainbowTex() {
           const c = document.createElement("canvas"); c.width = 256; c.height = 64;
           const g = c.getContext("2d");
@@ -1398,45 +1412,18 @@
         const beamTex = rainbowTex();
         for (let i = 0; i < 3; i++) {
           const beam = new THREE.Mesh(
-            new THREE.PlaneGeometry(9.5, 0.9),
+            new THREE.PlaneGeometry(9.5, 0.8),
             new THREE.MeshBasicMaterial({
-              map: beamTex, transparent: true, opacity: 0.8,
+              map: beamTex, transparent: true, opacity: 0.55,
               blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide
             })
           );
           beam.position.z = -2.3;
           beam.rotation.z = i * (Math.PI / 3);
+          beam.renderOrder = 0;
           beamGroup.add(beam);
         }
         scene.add(beamGroup);
-
-        // ---- the crystal: 8-sided cut gem (crown + pavilion), flat facets ----
-        const gemMat = new THREE.MeshPhysicalMaterial({
-          color: 0xffffff,
-          metalness: 0,
-          roughness: 0.015,
-          transmission: 1,           // fully see-through crystal
-          thickness: 2.4,            // refraction depth
-          ior: 2.42,                 // diamond's index of refraction
-          dispersion: 0.55,          // exaggerated rainbow fire (r165+)
-          clearcoat: 1,
-          clearcoatRoughness: 0,
-          envMapIntensity: 3.0,
-          specularIntensity: 1,
-          flatShading: true
-        });
-        const rig = new THREE.Group();   // pointer tilt lives here
-        const gem = new THREE.Group();   // spin lives here
-        const R = 1.35;
-        const crown = new THREE.Mesh(new THREE.CylinderGeometry(0.62, R, 0.72, 8, 1), gemMat);
-        crown.position.y = 0.36;
-        const pavilion = new THREE.Mesh(new THREE.ConeGeometry(R, 1.85, 8, 1), gemMat);
-        pavilion.rotation.x = Math.PI;
-        pavilion.position.y = -0.925;
-        gem.add(crown, pavilion);
-        gem.position.y = 0.15;
-        rig.add(gem);
-        scene.add(rig);
 
         // ---- twinkling star glints around the stone ----
         function starTex() {
@@ -1474,10 +1461,12 @@
           scene.add(s);
         }
 
-        // soft white key for extra facet definition
-        const keyLight = new THREE.DirectionalLight(0xffffff, 1.1);
-        keyLight.position.set(4, 6, 5);
-        scene.add(keyLight);
+        // brand-colored accent lights kissing the facets
+        const pink = new THREE.PointLight(0xfe2c55, 30, 30);
+        pink.position.set(-3, 2.2, 3);
+        const cyan = new THREE.PointLight(0x25f4ee, 30, 30);
+        cyan.position.set(3, -1.2, 2.6);
+        scene.add(pink, cyan);
 
         // pointer tilt: the stone leans toward your cursor/finger
         let tTiltX = 0, tTiltY = 0, tiltX = 0, tiltY = 0;
@@ -1498,10 +1487,10 @@
         (function loop() {
           requestAnimationFrame(loop);
           t += 0.01;
-          gem.rotation.y += 0.009;                      // slow elegant spin
-          gem.position.y = 0.15 + Math.sin(t * 0.8) * 0.09;  // gentle levitation bob
-          beamGroup.rotation.z -= 0.0035;               // rainbow rays sweep behind
-          tiltX += (tTiltX - tiltX) * 0.06;             // silky lerp toward pointer
+          gem.rotation.y += 0.008;                            // slow elegant spin
+          gem.position.y = 0.15 + Math.sin(t * 0.8) * 0.09;   // gentle levitation bob
+          beamGroup.rotation.z -= 0.0035;                     // rainbow rays sweep behind
+          tiltX += (tTiltX - tiltX) * 0.06;                   // silky lerp toward pointer
           tiltY += (tTiltY - tiltY) * 0.06;
           rig.rotation.x = tiltX; rig.rotation.z = -tiltY * 0.5; rig.rotation.y = tiltY;
           for (const s of glints) {
@@ -1521,5 +1510,6 @@
     }
   </script>
 </body>
+
 
 </html>
