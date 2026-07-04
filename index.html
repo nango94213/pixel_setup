@@ -10,16 +10,9 @@
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
 
-  <!-- import map so Three.js addons can resolve bare "three" imports -->
-  <!-- r178: MeshPhysicalMaterial.dispersion (real rainbow fire) needs r165+ -->
-  <script type="importmap">
-  {
-    "imports": {
-      "three": "https://unpkg.com/three@0.178.0/build/three.module.js",
-      "three/addons/": "https://unpkg.com/three@0.178.0/examples/jsm/"
-    }
-  }
-  </script>
+  <!-- Google model-viewer: production-grade 3D display (studio lighting, soft
+       shadows, drag-to-orbit) for the diamond.glb asset -->
+  <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js"></script>
 
   <!-- TikTok Pixel Code Start -->
   <script>
@@ -147,7 +140,12 @@
   <section class="section" id="cube" data-view="ViewContent" data-name="cube_3d">
     <h2 class="section-title reveal">Test. Iterate. <span class="gradient-text">Shine.</span></h2>
     <p class="section-sub reveal">Every split test cuts a new facet. Keep polishing until the winner sparkles — like this.</p>
-    <div class="cube-stage reveal" id="cubeStage" aria-hidden="true"></div>
+    <div class="cube-stage reveal">
+      <model-viewer id="gemViewer" src="diamond.glb" alt="Rotating transparent crystal diamond"
+        camera-controls disable-zoom touch-action="pan-y" interaction-prompt="none"
+        auto-rotate rotation-per-second="35deg" camera-orbit="0deg 78deg auto"
+        shadow-intensity="1.3" shadow-softness="0.9" exposure="1.25"></model-viewer>
+    </div>
   </section>
 
   <main>
@@ -1028,6 +1026,12 @@
        ================================================================ */
     var REDUCED = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+    // respect reduced motion: stop the diamond auto-rotate
+    if (REDUCED) {
+      var gemMV = document.querySelector("model-viewer");
+      if (gemMV) gemMV.removeAttribute("auto-rotate");
+    }
+
     // ---- Shooting stars ----
     (function () {
       if (REDUCED) return;
@@ -1304,211 +1308,6 @@
     })();
   </script>
 
-  <!-- 3D transparent crystal diamond (Three.js + built-in RoomEnvironment/ConvexGeometry) -->
-  <script type="module">
-    const stage = document.getElementById("cubeStage");
-    const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (stage && !reduce) {
-      Promise.all([
-        import("three"),
-        import("three/addons/geometries/ConvexGeometry.js"),
-        import("three/addons/environments/RoomEnvironment.js")
-      ])
-        .then(([THREE, cg, re]) => {
-        const ConvexGeometry = cg.ConvexGeometry;
-        const RoomEnvironment = re.RoomEnvironment;
-        const W = () => stage.clientWidth, H = () => stage.clientHeight;
-
-        const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(40, W() / H(), 0.1, 100);
-        camera.position.set(0, 0.4, 6.2);
-        camera.lookAt(0, 0, 0);
-
-        const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
-        renderer.setClearColor(0x000000, 0);       // fully transparent canvas — page shows through
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        renderer.setSize(W(), H());
-        stage.appendChild(renderer.domElement);
-        renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        renderer.toneMappingExposure = 1.2;
-        renderer.outputColorSpace = THREE.SRGBColorSpace;
-
-        // three's built-in studio lighting rig — same env model-viewer uses
-        const pmrem = new THREE.PMREMGenerator(renderer);
-        scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
-
-        // ---- brilliant-cut stone: one clean convex hull, no seams ----
-        const pts = [];
-        const G = 16;                                    // girdle points
-        for (let i = 0; i < G; i++) {
-          const a = (i / G) * Math.PI * 2;
-          pts.push(new THREE.Vector3(Math.cos(a) * 1.15, 0.02, Math.sin(a) * 1.15));
-          const b = ((i + 0.5) / G) * Math.PI * 2;
-          pts.push(new THREE.Vector3(Math.cos(b) * 1.15, -0.10, Math.sin(b) * 1.15));
-        }
-        for (let i = 0; i < 8; i++) {                    // crown ring
-          const a = ((i + 0.5) / 8) * Math.PI * 2;
-          pts.push(new THREE.Vector3(Math.cos(a) * 0.72, 0.44, Math.sin(a) * 0.72));
-        }
-        for (let i = 0; i < 8; i++) {                    // flat table
-          const a = (i / 8) * Math.PI * 2;
-          pts.push(new THREE.Vector3(Math.cos(a) * 0.42, 0.60, Math.sin(a) * 0.42));
-        }
-        pts.push(new THREE.Vector3(0, -1.28, 0));        // culet (pavilion tip)
-        const geo = new ConvexGeometry(pts);
-
-        // ---- transparent crystal: back pass + front pass + edge sparkle ----
-        // iridescence = physical thin-film rainbow sheen on the facets
-        const frontMat = new THREE.MeshPhysicalMaterial({
-          color: 0xffffff, metalness: 0, roughness: 0.015,
-          transparent: true, opacity: 0.22, depthWrite: false,
-          envMapIntensity: 2.4,
-          clearcoat: 1, clearcoatRoughness: 0,
-          iridescence: 0.9, iridescenceIOR: 1.6, iridescenceThicknessRange: [120, 480],
-          side: THREE.FrontSide
-        });
-        const backMat = new THREE.MeshPhysicalMaterial({
-          color: 0xdff1ff, metalness: 0, roughness: 0.03,
-          transparent: true, opacity: 0.30, depthWrite: false,
-          envMapIntensity: 1.5,
-          iridescence: 0.5, iridescenceIOR: 1.4,
-          side: THREE.BackSide
-        });
-        const rig = new THREE.Group();   // pointer tilt lives here
-        const gem = new THREE.Group();   // spin lives here
-        const backMesh = new THREE.Mesh(geo, backMat);  backMesh.renderOrder = 1;
-        const frontMesh = new THREE.Mesh(geo, frontMat); frontMesh.renderOrder = 2;
-        const edges = new THREE.LineSegments(
-          new THREE.EdgesGeometry(geo, 5),
-          new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.25 })
-        );
-        edges.renderOrder = 3;
-        gem.add(backMesh, frontMesh, edges);
-        gem.position.y = 0.15;
-        rig.add(gem);
-        scene.add(rig);
-
-        // ---- rainbow beams sweeping behind — visible THROUGH the stone ----
-        function rainbowTex() {
-          const c = document.createElement("canvas"); c.width = 256; c.height = 64;
-          const g = c.getContext("2d");
-          const gr = g.createLinearGradient(0, 0, 256, 0);
-          ["#ff004c", "#ff9a3c", "#ffd24a", "#3dff7c", "#25f4ee", "#4c6bff", "#b04cff"]
-            .forEach((col, i, a) => gr.addColorStop(i / (a.length - 1), col));
-          g.fillStyle = gr; g.fillRect(0, 0, 256, 64);
-          g.globalCompositeOperation = "destination-out";
-          const fy = g.createLinearGradient(0, 0, 0, 64);
-          fy.addColorStop(0, "rgba(0,0,0,1)"); fy.addColorStop(0.5, "rgba(0,0,0,0)"); fy.addColorStop(1, "rgba(0,0,0,1)");
-          g.fillStyle = fy; g.fillRect(0, 0, 256, 64);
-          const fx = g.createLinearGradient(0, 0, 256, 0);
-          fx.addColorStop(0, "rgba(0,0,0,1)"); fx.addColorStop(0.12, "rgba(0,0,0,0)");
-          fx.addColorStop(0.88, "rgba(0,0,0,0)"); fx.addColorStop(1, "rgba(0,0,0,1)");
-          g.fillStyle = fx; g.fillRect(0, 0, 256, 64);
-          const t = new THREE.CanvasTexture(c);
-          t.colorSpace = THREE.SRGBColorSpace;
-          return t;
-        }
-        const beamGroup = new THREE.Group();
-        const beamTex = rainbowTex();
-        for (let i = 0; i < 3; i++) {
-          const beam = new THREE.Mesh(
-            new THREE.PlaneGeometry(9.5, 0.8),
-            new THREE.MeshBasicMaterial({
-              map: beamTex, transparent: true, opacity: 0.55,
-              blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide
-            })
-          );
-          beam.position.z = -2.3;
-          beam.rotation.z = i * (Math.PI / 3);
-          beam.renderOrder = 0;
-          beamGroup.add(beam);
-        }
-        scene.add(beamGroup);
-
-        // ---- twinkling star glints around the stone ----
-        function starTex() {
-          const S = 128, c = document.createElement("canvas"); c.width = c.height = S;
-          const g = c.getContext("2d");
-          const glow = g.createRadialGradient(S/2, S/2, 0, S/2, S/2, S/2);
-          glow.addColorStop(0, "rgba(255,255,255,1)");
-          glow.addColorStop(0.18, "rgba(255,255,255,0.65)");
-          glow.addColorStop(1, "rgba(255,255,255,0)");
-          g.fillStyle = glow; g.fillRect(0, 0, S, S);
-          g.globalCompositeOperation = "lighter";
-          [[S/2 - 2, 0, 4, S], [0, S/2 - 2, S, 4]].forEach(([x, y, w, h]) => {
-            const lg = g.createLinearGradient(x, y, x + (w < h ? 0 : w), y + (w < h ? h : 0));
-            lg.addColorStop(0, "rgba(255,255,255,0)");
-            lg.addColorStop(0.5, "rgba(255,255,255,0.9)");
-            lg.addColorStop(1, "rgba(255,255,255,0)");
-            g.fillStyle = lg; g.fillRect(x, y, w, h);
-          });
-          const t = new THREE.CanvasTexture(c);
-          t.colorSpace = THREE.SRGBColorSpace;
-          return t;
-        }
-        const glintTex = starTex();
-        const glints = [];
-        for (let i = 0; i < 9; i++) {
-          const s = new THREE.Sprite(new THREE.SpriteMaterial({
-            map: glintTex, transparent: true, opacity: 0,
-            blending: THREE.AdditiveBlending, depthWrite: false
-          }));
-          const a = Math.random() * Math.PI * 2, e = (Math.random() - 0.35) * 1.6;
-          const r = 1.55 + Math.random() * 0.55;
-          s.position.set(Math.cos(a) * r, Math.sin(e) * r * 0.8 + 0.15, Math.sin(a) * r * 0.6);
-          s.userData = { phase: Math.random() * Math.PI * 2, speed: 0.9 + Math.random() * 1.6 };
-          glints.push(s);
-          scene.add(s);
-        }
-
-        // brand-colored accent lights kissing the facets
-        const pink = new THREE.PointLight(0xfe2c55, 30, 30);
-        pink.position.set(-3, 2.2, 3);
-        const cyan = new THREE.PointLight(0x25f4ee, 30, 30);
-        cyan.position.set(3, -1.2, 2.6);
-        scene.add(pink, cyan);
-
-        // pointer tilt: the stone leans toward your cursor/finger
-        let tTiltX = 0, tTiltY = 0, tiltX = 0, tiltY = 0;
-        stage.addEventListener("pointermove", (e) => {
-          const r = stage.getBoundingClientRect();
-          tTiltY = ((e.clientX - r.left) / r.width - 0.5) * 0.55;
-          tTiltX = ((e.clientY - r.top) / r.height - 0.5) * 0.35;
-        });
-        stage.addEventListener("pointerleave", () => { tTiltX = 0; tTiltY = 0; });
-
-        function resize() {
-          camera.aspect = W() / H(); camera.updateProjectionMatrix();
-          renderer.setSize(W(), H());
-        }
-        window.addEventListener("resize", resize);
-
-        let t = 0;
-        (function loop() {
-          requestAnimationFrame(loop);
-          t += 0.01;
-          gem.rotation.y += 0.008;                            // slow elegant spin
-          gem.position.y = 0.15 + Math.sin(t * 0.8) * 0.09;   // gentle levitation bob
-          beamGroup.rotation.z -= 0.0035;                     // rainbow rays sweep behind
-          tiltX += (tTiltX - tiltX) * 0.06;                   // silky lerp toward pointer
-          tiltY += (tTiltY - tiltY) * 0.06;
-          rig.rotation.x = tiltX; rig.rotation.z = -tiltY * 0.5; rig.rotation.y = tiltY;
-          for (const s of glints) {
-            const tw = Math.sin(t * s.userData.speed + s.userData.phase);
-            const v = Math.max(0, tw);
-            s.material.opacity = v * v * v * 0.9;
-            const sc = 0.28 + v * 0.5;
-            s.scale.set(sc, sc, 1);
-          }
-          renderer.render(scene, camera);
-        })();
-      })
-        .catch((e) => {
-          // CDN/WebGL failed — fail silently, page works fine without the gem
-          console.warn("3D diamond unavailable:", e);
-        });
-    }
-  </script>
 </body>
 
 
