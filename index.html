@@ -10,10 +10,6 @@
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
 
-  <!-- Google model-viewer: production-grade 3D display (studio lighting, soft
-       shadows, drag-to-orbit) for the diamond.glb asset -->
-  <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js"></script>
-
   <!-- TikTok Pixel Code Start -->
   <script>
   !function (w, d, t) {
@@ -141,11 +137,7 @@
     <h2 class="section-title reveal">Test. Iterate. <span class="gradient-text">Shine.</span></h2>
     <p class="section-sub reveal">Every split test cuts a new facet. Keep polishing until the winner sparkles — like this.</p>
     <div class="cube-stage reveal">
-      <model-viewer id="gemViewer" src="diamond.glb" alt="Rotating transparent crystal diamond"
-        camera-controls disable-zoom touch-action="pan-y" interaction-prompt="none"
-        auto-rotate rotation-per-second="35deg" camera-orbit="0deg 78deg auto"
-        environment-image="legacy" exposure="1.6"
-        shadow-intensity="1.3" shadow-softness="0.9"></model-viewer>
+      <canvas id="gemCanvas" aria-label="Rotating realistic diamond"></canvas>
     </div>
   </section>
 
@@ -1027,12 +1019,6 @@
        ================================================================ */
     var REDUCED = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-    // respect reduced motion: stop the diamond auto-rotate
-    if (REDUCED) {
-      var gemMV = document.querySelector("model-viewer");
-      if (gemMV) gemMV.removeAttribute("auto-rotate");
-    }
-
     // ---- Shooting stars ----
     (function () {
       if (REDUCED) return;
@@ -1309,6 +1295,354 @@
     })();
   </script>
 
+  <!-- Realistic ray-traced diamond: zero-dependency WebGL2. Rays refract into
+       the stone, bounce between the 96 facets via total internal reflection,
+       and exit with chromatic dispersion sampling a studio light cubemap. -->
+  <script>
+(function () {
+  // ============ brilliant-cut geometry (same cut as diamond.glb) ============
+  var TAU = Math.PI * 2;
+  function ring(n, r, y, off) {
+    var out = [];
+    for (var i = 0; i < n; i++) {
+      var a = ((i + off) / n) * TAU;
+      out.push([Math.cos(a) * r, y, Math.sin(a) * r]);
+    }
+    return out;
+  }
+  var table = ring(8, 0.40, 0.60, 0);
+  var crown = ring(8, 0.75, 0.42, 0.5);
+  var gTop = ring(16, 1.0, 0.03, 0);
+  var gBot = ring(16, 1.0, -0.07, 0.5);
+  var culet = [0, -1.05, 0];
+  var tableC = [0, 0.60, 0];
+  var tris = [];
+  function T(a, b, c) { tris.push([a, b, c]); }
+  function ix(arr, i) { return arr[((i % arr.length) + arr.length) % arr.length]; }
+  for (var i = 0; i < 8; i++) T(tableC, table[i], ix(table, i + 1));
+  for (var i = 0; i < 8; i++) {
+    T(table[i], crown[i], ix(table, i + 1));
+    T(ix(table, i + 1), crown[i], ix(crown, i + 1));
+  }
+  for (var i = 0; i < 8; i++) {
+    T(crown[i], ix(gTop, 2 * i), ix(gTop, 2 * i + 1));
+    T(crown[i], ix(gTop, 2 * i + 1), ix(gTop, 2 * i + 2));
+    T(crown[i], ix(gTop, 2 * i + 2), ix(crown, i + 1));
+  }
+  for (var j = 0; j < 16; j++) {
+    T(ix(gTop, j), ix(gBot, j), ix(gTop, j + 1));
+    T(ix(gTop, j + 1), ix(gBot, j), ix(gBot, j + 1));
+  }
+  for (var j = 0; j < 16; j++) T(ix(gBot, j), culet, ix(gBot, j + 1));
+
+  function sub(a, b) { return [a[0] - b[0], a[1] - b[1], a[2] - b[2]]; }
+  function cross(a, b) { return [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]]; }
+  function dot(a, b) { return a[0]*b[0] + a[1]*b[1] + a[2]*b[2]; }
+  function nrm(v) { var l = Math.hypot(v[0], v[1], v[2]) || 1; return [v[0]/l, v[1]/l, v[2]/l]; }
+
+  var positions = [], normals = [], triData = [];
+  for (var k = 0; k < tris.length; k++) {
+    var a = tris[k][0], b = tris[k][1], c = tris[k][2];
+    var n = nrm(cross(sub(b, a), sub(c, a)));
+    var cen = [(a[0]+b[0]+c[0])/3, (a[1]+b[1]+c[1])/3, (a[2]+b[2]+c[2])/3];
+    if (dot(n, cen) < 0) { var t2 = b; b = c; c = t2; n = [-n[0], -n[1], -n[2]]; }
+    positions.push.apply(positions, a); positions.push.apply(positions, b); positions.push.apply(positions, c);
+    normals.push.apply(normals, n); normals.push.apply(normals, n); normals.push.apply(normals, n);
+    triData.push(a[0], a[1], a[2], 0, b[0], b[1], b[2], 0, c[0], c[1], c[2], 0);
+  }
+  var NTRI = tris.length;
+
+  // ============ studio environment cube map (procedural, LDR canvas) ============
+  // black studio with big feathered white softbox strips -> the classic
+  // high-contrast look that makes diamond facets flash
+  function makeFace(painter) {
+    var S = 256, cv = document.createElement("canvas");
+    cv.width = cv.height = S;
+    var g = cv.getContext("2d");
+    var base = g.createLinearGradient(0, 0, 0, S); base.addColorStop(0, "#33353f"); base.addColorStop(0.6, "#16171e"); base.addColorStop(1, "#08080c"); g.fillStyle = base; g.fillRect(0, 0, S, S);
+    painter(g, S);
+    return g.getImageData(0, 0, S, S);
+  }
+  function strip(g, S, x, w, bright, tint) {
+    var gr = g.createLinearGradient(x - w, 0, x + w, 0);
+    var col = tint || [255, 255, 255];
+    gr.addColorStop(0, "rgba(" + col + ",0)");
+    gr.addColorStop(0.5, "rgba(" + col + "," + bright + ")");
+    gr.addColorStop(1, "rgba(" + col + ",0)");
+    g.fillStyle = gr; g.fillRect(x - w, 0, w * 2, S);
+  }
+  function hstrip(g, S, y, h, bright) {
+    var gr = g.createLinearGradient(0, y - h, 0, y + h);
+    gr.addColorStop(0, "rgba(255,255,255,0)");
+    gr.addColorStop(0.5, "rgba(255,255,255," + bright + ")");
+    gr.addColorStop(1, "rgba(255,255,255,0)");
+    g.fillStyle = gr; g.fillRect(0, y - h, S, h * 2);
+  }
+  var facePX = makeFace(function (g, S) { strip(g, S, S*0.30, S*0.10, 1.0); strip(g, S, S*0.72, S*0.05, 0.85); hstrip(g, S, S*0.55, S*0.02, 0.5); });
+  var faceNX = makeFace(function (g, S) { strip(g, S, S*0.50, S*0.13, 1.0); strip(g, S, S*0.15, S*0.05, 0.8, [225,235,255]); strip(g, S, S*0.82, S*0.04, 0.7); });
+  var facePZ = makeFace(function (g, S) { strip(g, S, S*0.62, S*0.09, 1.0); strip(g, S, S*0.20, S*0.05, 0.75, [255,242,225]); hstrip(g, S, S*0.42, S*0.015, 0.45); });
+  var faceNZ = makeFace(function (g, S) { strip(g, S, S*0.42, S*0.11, 0.95); strip(g, S, S*0.85, S*0.05, 0.85); strip(g, S, S*0.12, S*0.04, 0.7); hstrip(g, S, S*0.30, S*0.02, 0.5); });
+  var facePY = makeFace(function (g, S) { // ceiling: big soft key light
+    var gr = g.createRadialGradient(S*0.5, S*0.45, S*0.05, S*0.5, S*0.45, S*0.55);
+    gr.addColorStop(0, "rgba(255,255,255,1)");
+    gr.addColorStop(0.55, "rgba(255,255,255,0.85)");
+    gr.addColorStop(1, "rgba(255,255,255,0)");
+    g.fillStyle = gr; g.fillRect(0, 0, S, S);
+  });
+  var faceNY = makeFace(function (g, S) { // floor: very dim bounce
+    var gr = g.createRadialGradient(S*0.5, S*0.5, 0, S*0.5, S*0.5, S*0.6);
+    gr.addColorStop(0, "rgba(150,155,175,0.75)");
+    gr.addColorStop(1, "rgba(0,0,0,0)");
+    g.fillStyle = gr; g.fillRect(0, 0, S, S);
+  });
+
+  // ============ WebGL2 ============
+  var canvas = document.getElementById("gemCanvas");
+  if (!canvas) return;
+  var gl = canvas.getContext("webgl2", { alpha: true, antialias: true, premultipliedAlpha: true });
+  if (!gl) { document.title = "NO-WEBGL2"; return; }
+
+  var VS = "#version 300 es\n" +
+    "in vec3 aPos; in vec3 aNrm;\n" +
+    "uniform mat4 uModel, uVP;\n" +
+    "out vec3 vW; out vec3 vN;\n" +
+    "void main(){\n" +
+    "  vec4 w = uModel * vec4(aPos, 1.0);\n" +
+    "  vW = w.xyz;\n" +
+    "  vN = normalize((uModel * vec4(aNrm, 0.0)).xyz);\n" +
+    "  gl_Position = uVP * w;\n" +
+    "}";
+
+  var FS = "#version 300 es\n" +
+    "precision highp float;\n" +
+    "uniform samplerCube uEnv;\n" +
+    "uniform sampler2D uTris;   // 96 tris x 3 verts in RGBA32F texels\n" +
+    "uniform vec3 uCam;\n" +
+    "uniform mat4 uModel, uModelInv;\n" +
+    "uniform float uExposure;\n" +
+    "in vec3 vW; in vec3 vN;\n" +
+    "out vec4 frag;\n" +
+    "const float IOR = 2.42;\n" +
+    "const int NTRI = " + NTRI + ";\n" +
+    "vec3 vert(int i) { return texelFetch(uTris, ivec2(i, 0), 0).xyz; }\n" +
+    "bool hitTri(vec3 ro, vec3 rd, vec3 a, vec3 b, vec3 c, out float t, out vec3 n) {\n" +
+    "  vec3 e1 = b - a, e2 = c - a;\n" +
+    "  vec3 p = cross(rd, e2);\n" +
+    "  float det = dot(e1, p);\n" +
+    "  if (abs(det) < 1e-7) return false;\n" +
+    "  float inv = 1.0 / det;\n" +
+    "  vec3 tv = ro - a;\n" +
+    "  float u = dot(tv, p) * inv;\n" +
+    "  if (u < 0.0 || u > 1.0) return false;\n" +
+    "  vec3 q = cross(tv, e1);\n" +
+    "  float v = dot(rd, q) * inv;\n" +
+    "  if (v < 0.0 || u + v > 1.0) return false;\n" +
+    "  t = dot(e2, q) * inv;\n" +
+    "  if (t < 1e-4) return false;\n" +
+    "  n = normalize(cross(e1, e2));\n" +
+    "  return true;\n" +
+    "}\n" +
+    "vec3 traceExit(vec3 ro, vec3 rd) {\n" +
+    "  for (int b = 0; b < 5; b++) {\n" +
+    "    float best = 1e9; vec3 bn = vec3(0.0);\n" +
+    "    for (int i = 0; i < NTRI; i++) {\n" +
+    "      float t; vec3 n;\n" +
+    "      if (hitTri(ro, rd, vert(i*3), vert(i*3+1), vert(i*3+2), t, n) && t < best) { best = t; bn = n; }\n" +
+    "    }\n" +
+    "    if (best > 1e8) break;\n" +
+    "    vec3 hp = ro + rd * best;\n" +
+    "    if (dot(bn, rd) > 0.0) bn = -bn;\n" +
+    "    vec3 refr = refract(rd, bn, IOR);\n" +
+    "    if (dot(refr, refr) > 0.0) return refr;\n" +
+    "    rd = reflect(rd, bn);\n" +
+    "    ro = hp + rd * 1e-3;\n" +
+    "  }\n" +
+    "  return rd;\n" +
+    "}\n" +
+    "void main() {\n" +
+    "  vec3 I = normalize(vW - uCam);\n" +
+    "  vec3 N = normalize(vN);\n" +
+    "  vec3 rdW = refract(I, N, 1.0 / IOR);\n" +
+    "  vec3 roL = (uModelInv * vec4(vW, 1.0)).xyz;\n" +
+    "  vec3 rdL = normalize((uModelInv * vec4(rdW, 0.0)).xyz);\n" +
+    "  roL += rdL * 1e-3;\n" +
+    "  vec3 exitL = traceExit(roL, rdL);\n" +
+    "  vec3 exitW = normalize((uModel * vec4(exitL, 0.0)).xyz);\n" +
+    "  float ab = 0.028;                                   // dispersion 'fire'\n" +
+    "  float r = texture(uEnv, normalize(exitW + vec3(ab, 0.0, -ab))).r;\n" +
+    "  float g = texture(uEnv, exitW).g;\n" +
+    "  float b = texture(uEnv, normalize(exitW - vec3(ab, 0.0, -ab))).b;\n" +
+    "  vec3 refrCol = vec3(r, g, b);\n" +
+    "  vec3 reflCol = texture(uEnv, reflect(I, N)).rgb;\n" +
+    "  float F0 = 0.172;\n" +
+    "  float F = F0 + (1.0 - F0) * pow(1.0 - max(0.0, dot(-I, N)), 5.0);\n" +
+    "  vec3 col = mix(refrCol, reflCol, clamp(F, 0.0, 1.0));\n" +
+    "  col = pow(col, vec3(1.5)) * uExposure;              // contrast punch\n" +
+    "  col = col / (col + vec3(0.6));                      // soft tonemap\n" +
+    "  col = pow(col, vec3(1.0 / 2.2));\n" +
+    "  frag = vec4(col, 1.0);\n" +
+    "}";
+
+  function sh(type, src) {
+    var s = gl.createShader(type);
+    gl.shaderSource(s, src); gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
+      document.title = "SHADER-ERR";
+      console.error(gl.getShaderInfoLog(s));
+    }
+    return s;
+  }
+  var prog = gl.createProgram();
+  gl.attachShader(prog, sh(gl.VERTEX_SHADER, VS));
+  gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, FS));
+  gl.linkProgram(prog);
+  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) { document.title = "LINK-ERR: " + gl.getProgramInfoLog(prog); }
+  gl.useProgram(prog);
+
+  // vertex buffers
+  function attr(name, data) {
+    var buf = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data), gl.STATIC_DRAW);
+    var loc = gl.getAttribLocation(prog, name);
+    gl.enableVertexAttribArray(loc);
+    gl.vertexAttribPointer(loc, 3, gl.FLOAT, false, 0, 0);
+  }
+  attr("aPos", positions);
+  attr("aNrm", normals);
+
+  // triangle data texture (RGBA32F, one texel per vertex)
+  var triTex = gl.createTexture();
+  gl.activeTexture(gl.TEXTURE1);
+  gl.bindTexture(gl.TEXTURE_2D, triTex);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, NTRI * 3, 1, 0, gl.RGBA, gl.FLOAT, new Float32Array(triData));
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+
+  // env cube map
+  var envTex = gl.createTexture();
+  gl.activeTexture(gl.TEXTURE0);
+  gl.bindTexture(gl.TEXTURE_CUBE_MAP, envTex);
+  var faces = [facePX, faceNX, facePY, faceNY, facePZ, faceNZ];
+  for (var f = 0; f < 6; f++) {
+    gl.texImage2D(gl.TEXTURE_CUBE_MAP_POSITIVE_X + f, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, faces[f]);
+  }
+  gl.generateMipmap(gl.TEXTURE_CUBE_MAP);
+  gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+  gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+
+  gl.uniform1i(gl.getUniformLocation(prog, "uEnv"), 0);
+  gl.uniform1i(gl.getUniformLocation(prog, "uTris"), 1);
+  gl.uniform1f(gl.getUniformLocation(prog, "uExposure"), 3.8);
+
+  // ============ minimal mat4 ============
+  function mul(a, b) {
+    var o = new Float32Array(16);
+    for (var r = 0; r < 4; r++) for (var c2 = 0; c2 < 4; c2++) {
+      var s = 0;
+      for (var k2 = 0; k2 < 4; k2++) s += a[k2 * 4 + r] * b[c2 * 4 + k2];
+      o[c2 * 4 + r] = s;
+    }
+    return o;
+  }
+  function persp(fovy, asp, near, far) {
+    var f = 1 / Math.tan(fovy / 2), nf = 1 / (near - far);
+    return new Float32Array([f / asp, 0, 0, 0, 0, f, 0, 0, 0, 0, (far + near) * nf, -1, 0, 0, 2 * far * near * nf, 0]);
+  }
+  function lookAt(eye, at, up) {
+    var z = nrm(sub(eye, at));
+    var x = nrm(cross(up, z));
+    var y = cross(z, x);
+    return new Float32Array([x[0], y[0], z[0], 0, x[1], y[1], z[1], 0, x[2], y[2], z[2], 0,
+      -dot(x, eye), -dot(y, eye), -dot(z, eye), 1]);
+  }
+  function rotY(a) {
+    var c = Math.cos(a), s = Math.sin(a);
+    return new Float32Array([c, 0, -s, 0, 0, 1, 0, 0, s, 0, c, 0, 0, 0, 0, 1]);
+  }
+  function rotX(a) {
+    var c = Math.cos(a), s = Math.sin(a);
+    return new Float32Array([1, 0, 0, 0, 0, c, s, 0, 0, -s, c, 0, 0, 0, 0, 1]);
+  }
+  function transpose(m) {
+    return new Float32Array([m[0], m[4], m[8], m[12], m[1], m[5], m[9], m[13], m[2], m[6], m[10], m[14], m[3], m[7], m[11], m[15]]);
+  }
+  // inverse of rotation-only model matrix = transpose of 3x3
+  function invRot(m) {
+    var t = transpose(m);
+    t[3] = 0; t[7] = 0; t[11] = 0; t[12] = 0; t[13] = 0; t[14] = 0; t[15] = 1;
+    return t;
+  }
+
+  var uVP = gl.getUniformLocation(prog, "uVP");
+  var uCam = gl.getUniformLocation(prog, "uCam");
+  var uModel = gl.getUniformLocation(prog, "uModel");
+  var uModelInv = gl.getUniformLocation(prog, "uModelInv");
+  var eye = [0, 0.9, 5.4];
+
+  function resize() {
+    var dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+    var w = canvas.clientWidth, h = canvas.clientHeight;
+    if (!w || !h) return;
+    canvas.width = Math.round(w * dpr);
+    canvas.height = Math.round(h * dpr);
+    gl.viewport(0, 0, canvas.width, canvas.height);
+    var vp = mul(persp(0.46, w / h, 0.1, 100), lookAt(eye, [0, -0.05, 0], [0, 1, 0]));
+    gl.uniformMatrix4fv(uVP, false, vp);
+    gl.uniform3fv(uCam, eye);
+  }
+  window.addEventListener("resize", resize);
+  resize();
+
+  gl.enable(gl.DEPTH_TEST);
+  gl.clearColor(0, 0, 0, 0);
+
+  // pointer tilt (lerped)
+  var tTX = 0, tTY = 0, tx = 0, ty = 0;
+  canvas.addEventListener("pointermove", function (e) {
+    var r = canvas.getBoundingClientRect();
+    tTY = ((e.clientX - r.left) / r.width - 0.5) * 0.7;
+    tTX = ((e.clientY - r.top) / r.height - 0.5) * 0.45;
+  });
+  canvas.addEventListener("pointerleave", function () { tTX = 0; tTY = 0; });
+
+  var REDUCE = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var angle = 0.6, t = 0;
+
+  function frame() {
+    tx += (tTX - tx) * 0.06; ty += (tTY - ty) * 0.06;
+    var bob = REDUCE ? 0 : Math.sin(t * 0.8) * 0.06;
+    var model = mul(rotX(tx), rotY(angle + ty));
+    model[13] += bob;                      // translate Y
+    // inverse of rot+translate: R^T then t' = -(R^T * t)
+    var inv = invRot(model);
+    inv[12] = -(inv[0] * model[12] + inv[4] * model[13] + inv[8] * model[14]);
+    inv[13] = -(inv[1] * model[12] + inv[5] * model[13] + inv[9] * model[14]);
+    inv[14] = -(inv[2] * model[12] + inv[6] * model[13] + inv[10] * model[14]);
+    gl.uniformMatrix4fv(uModel, false, model);
+    gl.uniformMatrix4fv(uModelInv, false, inv);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    gl.drawArrays(gl.TRIANGLES, 0, positions.length / 3);
+  }
+
+  if (REDUCE) { frame(); return; }
+
+  // animate only while on screen
+  var running = false, raf = null;
+  function loop() {
+    t += 0.01; angle += 0.006;
+    frame();
+    if (running) raf = requestAnimationFrame(loop);
+  }
+  var vio = new IntersectionObserver(function (entries) {
+    entries.forEach(function (en) {
+      if (en.isIntersecting && !running) { running = true; raf = requestAnimationFrame(loop); }
+      else if (!en.isIntersecting && running) { running = false; cancelAnimationFrame(raf); }
+    });
+  }, { threshold: 0.05 });
+  vio.observe(canvas);
+})();
+  </script>
 </body>
 
 
