@@ -1083,6 +1083,44 @@ html { scroll-padding-top: 90px; }
 .erow:nth-child(3) .eball { background: radial-gradient(circle at 35% 30%, #fff, #8c3cff 55%, #519); box-shadow: 0 0 12px rgba(140, 60, 255, 0.6); }
 .erow:nth-child(4) .eball { background: radial-gradient(circle at 35% 30%, #fff, #ffd24a 55%, #a70); box-shadow: 0 0 12px rgba(255, 210, 74, 0.6); }
 
+/* 5 · dot sphere */
+.sdot {
+  position: absolute; left: -2.5px; top: -2.5px; width: 5px; height: 5px; border-radius: 50%;
+  background: var(--tt-cyan); box-shadow: 0 0 6px rgba(37, 244, 238, 0.8);
+  will-change: transform, opacity;
+}
+.sdot.alt { background: var(--tt-pink); box-shadow: 0 0 6px rgba(254, 44, 85, 0.8); }
+
+/* 6 · text wave */
+.wave { display: flex; gap: 0.14em; font-weight: 800; font-size: clamp(1.35rem, 3vw, 1.9rem); letter-spacing: 0.06em; }
+.wave .wltr {
+  display: inline-block;
+  background: linear-gradient(180deg, #ffffff, #8fe9ff);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.wave .wsym {
+  background: linear-gradient(180deg, var(--tt-pink), #ff9a3c);
+  -webkit-background-clip: text; background-clip: text;
+}
+
+/* 7 · odometer */
+.odo { text-align: center; }
+.odo span {
+  font-size: clamp(2.2rem, 5vw, 3.1rem); font-weight: 800; letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+  background: linear-gradient(135deg, var(--tt-cyan), var(--tt-pink));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.odo small { display: block; color: var(--muted); letter-spacing: 0.16em; text-transform: uppercase; font-size: 0.68rem; margin-top: 0.4rem; }
+
+/* --- spring physics + lenis helpers --- */
+/* springs drive translate per-frame now — drop it from the transition */
+.btn.springy, .fire-all.springy {
+  transition: transform 0.15s ease, box-shadow 0.25s ease, border-color 0.15s ease;
+}
+/* lenis owns the smoothing; CSS smooth scrolling must not fight it */
+html.lenis { scroll-behavior: auto; }
+
 /* --- Neon Whack-a-Gift arcade --- */
 .btn-game {
   color: #06060b; font-weight: 800;
