@@ -1003,6 +1003,86 @@ html { scroll-padding-top: 90px; }
   pointer-events: none; z-index: 3; font-size: 1.15rem;
 }
 
+/* --- Motion Lab (anime.js showcase) --- */
+.mlab { grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); }
+.mpanel {
+  padding: 1.2rem 1.2rem 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: var(--radius);
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.03) 60%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  backdrop-filter: blur(18px) saturate(160%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 20px 50px rgba(0, 0, 0, 0.30);
+}
+.mhead { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; margin-bottom: 0.9rem; }
+.mhead h3 { font-size: 1.02rem; }
+.mtag {
+  font-size: 0.68rem; letter-spacing: 0.06em; color: var(--tt-cyan);
+  border: 1px solid rgba(37, 244, 238, 0.35); border-radius: 999px;
+  padding: 0.2rem 0.6rem; white-space: nowrap;
+}
+.mstage {
+  position: relative; height: 190px; border-radius: 12px; overflow: hidden;
+  background: rgba(6, 6, 11, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+.mstage-center { display: grid; place-items: center; }
+.mhint { color: var(--muted); font-size: 0.78rem; margin-top: 0.6rem; }
+
+/* 1 · stagger dot grid */
+#mGrid {
+  display: grid; grid-template-columns: repeat(14, 1fr); grid-template-rows: repeat(8, 1fr);
+  justify-items: center; align-items: center; padding: 12px; cursor: pointer;
+}
+.mdot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--tt-cyan);
+  box-shadow: 0 0 8px rgba(37, 244, 238, 0.7);
+  opacity: 0.45;
+}
+
+/* 2 · svg line draw */
+#mDraw { width: 78%; max-width: 300px; height: auto; }
+#mDraw .dline {
+  stroke: url(#dgrad); stroke-width: 2;
+  stroke-linecap: round; stroke-linejoin: round;
+  filter: drop-shadow(0 0 6px rgba(37, 244, 238, 0.35));
+}
+
+/* 3 · timeline shapes */
+.tl-shape { position: absolute; display: block; }
+.tl-sq {
+  width: 26px; height: 26px; left: 22px; top: 34px; border-radius: 6px;
+  background: linear-gradient(135deg, var(--tt-cyan), #4c6bff);
+  box-shadow: 0 0 14px rgba(37, 244, 238, 0.45);
+}
+.tl-ci {
+  width: 26px; height: 26px; left: 46%; top: 82px; border-radius: 50%;
+  background: linear-gradient(135deg, #8c3cff, var(--tt-pink));
+  box-shadow: 0 0 14px rgba(140, 60, 255, 0.5);
+}
+.tl-tri {
+  left: 72%; bottom: 26px; width: 0; height: 0;
+  border-left: 15px solid transparent; border-right: 15px solid transparent;
+  border-bottom: 26px solid #ffd24a;
+  filter: drop-shadow(0 0 10px rgba(255, 210, 74, 0.5));
+}
+
+/* 4 · easing race */
+.mstage-rows { display: flex; flex-direction: column; justify-content: space-evenly; padding: 12px 14px; }
+.erow { display: flex; align-items: center; gap: 0.7rem; }
+.elbl { flex: 0 0 52px; font-size: 0.72rem; letter-spacing: 0.05em; color: var(--muted); text-transform: uppercase; }
+.etrack { position: relative; flex: 1; height: 2px; background: rgba(255, 255, 255, 0.10); border-radius: 999px; }
+.eball {
+  position: absolute; left: 0; top: 50%; margin-top: -9px;
+  width: 18px; height: 18px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff, var(--tt-cyan) 55%, #0aa);
+  box-shadow: 0 0 12px rgba(37, 244, 238, 0.6);
+}
+.erow:nth-child(2) .eball { background: radial-gradient(circle at 35% 30%, #fff, var(--tt-pink) 55%, #a00); box-shadow: 0 0 12px rgba(254, 44, 85, 0.6); }
+.erow:nth-child(3) .eball { background: radial-gradient(circle at 35% 30%, #fff, #8c3cff 55%, #519); box-shadow: 0 0 12px rgba(140, 60, 255, 0.6); }
+.erow:nth-child(4) .eball { background: radial-gradient(circle at 35% 30%, #fff, #ffd24a 55%, #a70); box-shadow: 0 0 12px rgba(255, 210, 74, 0.6); }
+
 /* --- Neon Whack-a-Gift arcade --- */
 .btn-game {
   color: #06060b; font-weight: 800;

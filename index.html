@@ -55,6 +55,7 @@
       <a href="#how">How</a>
       <a href="#playground">Demo</a>
       <a href="#quiz">Quiz</a>
+      <a href="#motion">Motion</a>
       <a href="#faq">FAQ</a>
     </div>
     <a class="glass-nav-cta" href="#draw">🎁 Spin</a>
@@ -374,6 +375,53 @@
             <span><strong>Mia L.</strong><small>Media Buyer, ecom agency</small></span>
           </figcaption>
         </figure>
+      </div>
+    </section>
+
+    <!-- MOTION LAB (anime.js showcase) -->
+    <section class="section" id="motion">
+      <h2 class="section-title reveal">Motion Lab</h2>
+      <p class="section-sub reveal">Four looping motion studies, choreographed with anime.js — stagger grids, SVG line drawing, timelines and easing physics.</p>
+
+      <div class="grid mlab">
+        <article class="mpanel reveal">
+          <header class="mhead"><h3>Stagger ripple</h3><span class="mtag">anime.stagger(grid)</span></header>
+          <div class="mstage" id="mGrid" title="Tap to ripple from a new spot"></div>
+          <p class="mhint">Tap the grid to ripple from where you touch</p>
+        </article>
+
+        <article class="mpanel reveal">
+          <header class="mhead"><h3>SVG line draw</h3><span class="mtag">strokeDashoffset</span></header>
+          <div class="mstage mstage-center">
+            <svg id="mDraw" viewBox="0 0 200 140" fill="none" aria-hidden="true">
+              <defs>
+                <linearGradient id="dgrad" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0" stop-color="#25f4ee"/>
+                  <stop offset="0.5" stop-color="#8c3cff"/>
+                  <stop offset="1" stop-color="#fe2c55"/>
+                </linearGradient>
+              </defs>
+              <path class="dline" d="M30 52 L62 18 L138 18 L170 52 L100 128 Z"/>
+              <path class="dline" d="M30 52 L170 52"/>
+              <path class="dline" d="M62 18 L84 52 M138 18 L116 52 M100 18 L84 52 M100 18 L116 52"/>
+              <path class="dline" d="M84 52 L100 128 M116 52 L100 128 M62 18 L30 52 M138 18 L170 52"/>
+            </svg>
+          </div>
+        </article>
+
+        <article class="mpanel reveal">
+          <header class="mhead"><h3>Timeline choreography</h3><span class="mtag">anime.timeline()</span></header>
+          <div class="mstage" id="mTl">
+            <span class="tl-shape tl-sq" aria-hidden="true"></span>
+            <span class="tl-shape tl-ci" aria-hidden="true"></span>
+            <span class="tl-shape tl-tri" aria-hidden="true"></span>
+          </div>
+        </article>
+
+        <article class="mpanel reveal">
+          <header class="mhead"><h3>Easing race</h3><span class="mtag">elastic · bounce · expo · back</span></header>
+          <div class="mstage mstage-rows" id="mEase"></div>
+        </article>
       </div>
     </section>
 
@@ -1433,6 +1481,128 @@
           });
         }).observe(grid, { childList: true, subtree: true });
       })();
+    });
+
+    /* ================================================================
+       Motion Lab — anime.js showcase section. The stages are built
+       unconditionally so the panels still render (static) if the
+       library is unavailable or reduced motion is on.
+       ================================================================ */
+    document.addEventListener("DOMContentLoaded", function () {
+      // ---- build the dot grid ----
+      var gridEl = document.getElementById("mGrid");
+      var dots = [];
+      var COLS = 14, ROWS = 8;
+      if (gridEl) {
+        for (var i = 0; i < COLS * ROWS; i++) {
+          var d = document.createElement("span");
+          d.className = "mdot";
+          gridEl.appendChild(d);
+          dots.push(d);
+        }
+      }
+      // ---- build the easing race rows ----
+      var easeEl = document.getElementById("mEase");
+      var balls = [];
+      var EASINGS = [
+        ["elastic", "easeOutElastic(1, .5)"],
+        ["bounce", "easeOutBounce"],
+        ["expo", "easeInOutExpo"],
+        ["back", "easeOutBack"]
+      ];
+      if (easeEl) {
+        EASINGS.forEach(function (e) {
+          var row = document.createElement("div");
+          row.className = "erow";
+          var lbl = document.createElement("span");
+          lbl.className = "elbl";
+          lbl.textContent = e[0];
+          var track = document.createElement("div");
+          track.className = "etrack";
+          var ball = document.createElement("span");
+          ball.className = "eball";
+          track.appendChild(ball);
+          row.appendChild(lbl); row.appendChild(track);
+          easeEl.appendChild(row);
+          balls.push({ ball: ball, track: track, easing: e[1] });
+        });
+      }
+
+      if (REDUCED || typeof window.anime !== "function") return;
+      var anime = window.anime;
+
+      // start each study only when its panel scrolls into view
+      function onVisible(el, fn) {
+        if (!el) return;
+        var io = new IntersectionObserver(function (es) {
+          es.forEach(function (en) {
+            if (en.isIntersecting) { io.disconnect(); fn(); }
+          });
+        }, { threshold: 0.3 });
+        io.observe(el);
+      }
+
+      // ---- 1 · stagger ripple (tap to re-ripple from that spot) ----
+      onVisible(gridEl, function () {
+        function ripple(from) {
+          anime.remove(dots);
+          anime({
+            targets: dots,
+            keyframes: [
+              { scale: 1.7, opacity: 1, duration: 300, easing: "easeOutSine" },
+              { scale: 1, opacity: 0.45, duration: 600, easing: "easeInOutQuad" }
+            ],
+            delay: anime.stagger(45, { grid: [COLS, ROWS], from: from }),
+            complete: function () { setTimeout(function () { ripple("center"); }, 500); }
+          });
+        }
+        ripple("center");
+        gridEl.addEventListener("pointerdown", function (e) {
+          var r = gridEl.getBoundingClientRect();
+          var col = Math.min(COLS - 1, Math.max(0, Math.floor((e.clientX - r.left) / r.width * COLS)));
+          var row = Math.min(ROWS - 1, Math.max(0, Math.floor((e.clientY - r.top) / r.height * ROWS)));
+          ripple(row * COLS + col);
+        });
+      });
+
+      // ---- 2 · SVG line draw ----
+      onVisible(document.getElementById("mDraw"), function () {
+        anime({
+          targets: "#mDraw .dline",
+          strokeDashoffset: [anime.setDashoffset, 0],
+          easing: "easeInOutSine",
+          duration: 1700,
+          delay: anime.stagger(260),
+          direction: "alternate",
+          loop: true
+        });
+      });
+
+      // ---- 3 · timeline choreography ----
+      onVisible(document.getElementById("mTl"), function () {
+        var stage = document.getElementById("mTl");
+        var dist = Math.max(120, stage.clientWidth - 70);
+        anime.timeline({ loop: true, direction: "alternate", easing: "easeInOutQuad" })
+          .add({ targets: "#mTl .tl-sq", translateX: dist, rotate: "1turn", duration: 950 })
+          .add({ targets: "#mTl .tl-ci", scale: [1, 2.1], duration: 650 }, "-=450")
+          .add({ targets: "#mTl .tl-tri", translateY: -54, rotate: "0.5turn", duration: 750 }, "-=350");
+      });
+
+      // ---- 4 · easing race ----
+      onVisible(easeEl, function () {
+        balls.forEach(function (b, i) {
+          var dist = Math.max(80, b.track.clientWidth - 22);
+          anime({
+            targets: b.ball,
+            translateX: dist,
+            duration: 1500,
+            delay: 300 + i * 120,
+            direction: "alternate",
+            loop: true,
+            easing: b.easing
+          });
+        });
+      });
     });
   </script>
 
