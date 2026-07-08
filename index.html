@@ -10,6 +10,10 @@
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
 
+  <!-- anime.js v3 (UMD) — springy micro-interactions; page degrades
+       gracefully to the CSS animations if this fails to load -->
+  <script defer src="https://cdn.jsdelivr.net/npm/animejs@3.2.2/lib/anime.min.js"></script>
+
   <!-- TikTok Pixel Code Start -->
   <script>
   !function (w, d, t) {
@@ -1293,6 +1297,143 @@
         });
       }
     })();
+
+    /* ================================================================
+       anime.js layer — springy micro-interactions.
+       Every effect is guarded: if the CDN fails or reduced motion is
+       on, the existing CSS animations take over untouched.
+       ================================================================ */
+    document.addEventListener("DOMContentLoaded", function () {
+      if (REDUCED || typeof window.anime !== "function") return;
+      var anime = window.anime;
+
+      // ---- hero headline: letter-by-letter elastic cascade ----
+      (function () {
+        var h1 = document.querySelector(".hero h1");
+        if (!h1) return;
+        Array.prototype.slice.call(h1.childNodes).forEach(function (node) {
+          if (node.nodeType === 3) {                    // text -> per-letter spans
+            var frag = document.createDocumentFragment();
+            node.textContent.split("").forEach(function (ch) {
+              if (ch.trim() === "") { frag.appendChild(document.createTextNode(ch)); return; }
+              var s = document.createElement("span");
+              s.className = "ltr";
+              s.textContent = ch;
+              frag.appendChild(s);
+            });
+            node.parentNode.replaceChild(frag, node);
+          } else if (node.nodeType === 1 && node.tagName !== "BR") {
+            node.classList.add("ltr-unit");             // gradient span moves as one
+          }
+        });
+        h1.style.animation = "none";                    // hand entrance to anime
+        h1.style.opacity = "1";
+        anime({
+          targets: ".hero h1 .ltr, .hero h1 .ltr-unit",
+          translateY: [54, 0],
+          rotateZ: function () { return [anime.random(-16, 16), 0]; },
+          opacity: [0, 1],
+          easing: "easeOutElastic(1, .7)",
+          duration: 1100,
+          delay: anime.stagger(26, { start: 950 })
+        });
+      })();
+
+      // ---- variable chips: staggered elastic pop-in ----
+      (function () {
+        var wrap = document.querySelector(".chips");
+        if (!wrap) return;
+        var chips = wrap.querySelectorAll(".chip");
+        chips.forEach(function (c) { c.style.opacity = "0"; });
+        var io = new IntersectionObserver(function (es) {
+          es.forEach(function (en) {
+            if (!en.isIntersecting) return;
+            io.disconnect();
+            anime({
+              targets: chips,
+              opacity: [0, 1],
+              scale: [0.55, 1],
+              translateY: [18, 0],
+              rotateZ: function () { return [anime.random(-9, 9), 0]; },
+              easing: "easeOutElastic(1, .6)",
+              duration: 900,
+              delay: anime.stagger(55),
+              complete: function () {                    // give hover back to CSS
+                chips.forEach(function (c) { c.style.transform = ""; c.style.opacity = ""; });
+              }
+            });
+          });
+        }, { threshold: 0.35 });
+        io.observe(wrap);
+      })();
+
+      // ---- prize modal: elastic pop + emoji tada ----
+      (function () {
+        var modal = document.getElementById("prizeModal");
+        if (!modal) return;
+        new MutationObserver(function (ms) {
+          ms.forEach(function (m) {
+            if (m.attributeName !== "class" || !modal.classList.contains("show")) return;
+            anime({ targets: ".prize-card", scale: [0.7, 1], duration: 750, easing: "easeOutElastic(1, .55)" });
+            anime({
+              targets: "#prizeEmoji",
+              keyframes: [
+                { scale: 0.3, rotateZ: -22, duration: 0 },
+                { scale: 1.3, rotateZ: 14, duration: 420 },
+                { scale: 1, rotateZ: 0, duration: 380 }
+              ],
+              easing: "easeOutBack"
+            });
+          });
+        }).observe(modal, { attributes: true });
+      })();
+
+      // ---- quiz answers: springy press feedback ----
+      document.querySelectorAll(".opts button").forEach(function (b) {
+        b.addEventListener("click", function () {
+          anime({
+            targets: b,
+            keyframes: [{ scale: 1.16, duration: 130 }, { scale: 1, duration: 430 }],
+            easing: "easeOutElastic(1, .5)"
+          });
+        });
+      });
+
+      // ---- arcade whacks: emoji shards fly out of the cell ----
+      // watches for the +N/-N score pops the game already spawns,
+      // so the game (and its Purchase tracking) stays untouched
+      (function () {
+        var grid = document.getElementById("gGrid");
+        if (!grid) return;
+        new MutationObserver(function (ms) {
+          ms.forEach(function (m) {
+            for (var k = 0; k < m.addedNodes.length; k++) {
+              var node = m.addedNodes[k];
+              if (!(node.nodeType === 1 && node.classList && node.classList.contains("pop-score"))) continue;
+              var cell = node.parentNode;
+              var good = node.classList.contains("good");
+              for (var i = 0; i < 6; i++) {
+                var s = document.createElement("span");
+                s.className = "shardfx";
+                s.textContent = good ? (i % 2 ? "✨" : "🎉") : "💥";
+                cell.appendChild(s);
+                anime({
+                  targets: s,
+                  translateX: anime.random(-70, 70),
+                  translateY: anime.random(-85, 30),
+                  scale: [1, 0.3],
+                  opacity: [1, 0],
+                  rotateZ: anime.random(-180, 180),
+                  duration: anime.random(550, 850),
+                  easing: "easeOutExpo",
+                  complete: function (a) { a.animatables[0].target.remove(); }
+                });
+              }
+            }
+          });
+        }).observe(grid, { childList: true, subtree: true });
+      })();
+    });
   </script>
 
   <!-- Realistic ray-traced diamond: zero-dependency WebGL2. Rays refract into

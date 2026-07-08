@@ -996,6 +996,13 @@ html { scrollbar-color: var(--surface-2) var(--bg); }
 /* anchors land below the floating glass nav */
 html { scroll-padding-top: 90px; }
 
+/* --- anime.js layer helpers --- */
+.ltr, .ltr-unit { display: inline-block; will-change: transform; }
+.shardfx {
+  position: absolute; left: 50%; top: 50%; margin: -10px 0 0 -10px;
+  pointer-events: none; z-index: 3; font-size: 1.15rem;
+}
+
 /* --- Neon Whack-a-Gift arcade --- */
 .btn-game {
   color: #06060b; font-weight: 800;
